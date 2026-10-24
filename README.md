@@ -42,7 +42,7 @@ npm run simulate
 3. Tick **Rider 1** and **Rider 2**. A tracking link appears for each.
 4. Run `npm run simulate`. Teal dots appear and move along their routes, leaving fading trails.
 5. When a rider comes within 50 metres of a recipient, that recipient is marked **arrived**, the panel highlights it, and the dashboard plays a short chime. Click anywhere on the page first so the browser allows sound.
-6. Tick the recipient's checkbox to mark it **received**.
+6. Tick the recipient's checkbox to mark it **received**. A **×** appears beside it: click once and it asks **Remove?**, click again to clear the finished delivery and free the list for a new name.
 7. Stop the simulator and the riders change to **NOT REPORTING** after a few seconds of silence.
 
 ## How it is put together

@@ -63,6 +63,44 @@ function markerFor(recipient) {
   return marker;
 }
 
+// A received delivery can be cleared away to make room on the list. Two clicks:
+// the first arms the button, the second removes, so a mis-tap costs nothing.
+function removeButtonFor(recipient) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'remove-button';
+  button.textContent = '×';
+  button.title = `Remove ${recipient.name} from the route`;
+  button.setAttribute('aria-label', `Remove ${recipient.name} from the route`);
+
+  let armed = false;
+  let disarm;
+
+  const reset = () => {
+    armed = false;
+    clearTimeout(disarm);
+    button.classList.remove('is-armed');
+    button.textContent = '×';
+  };
+
+  button.addEventListener('click', async () => {
+    if (!armed) {
+      armed = true;
+      button.classList.add('is-armed');
+      button.textContent = 'Remove?';
+      disarm = setTimeout(reset, 3000);
+      return;
+    }
+
+    clearTimeout(disarm);
+    const { ok } = await api(`/api/recipients/${recipient.id}`, { method: 'DELETE' });
+    if (!ok) reset();
+    else dropRecipient(recipient.id);
+  });
+
+  return button;
+}
+
 function rowFor(recipient) {
   const item = document.createElement('li');
   item.className = 'recipient';
@@ -100,6 +138,7 @@ function rowFor(recipient) {
   });
 
   row.append(nameButton, tick);
+  if (recipient.received) row.append(removeButtonFor(recipient));
 
   const info = document.createElement('div');
   info.className = 'recipient-info';
@@ -139,6 +178,28 @@ function renderList(recipients) {
   listEl.hidden = recipients.length === 0;
   listEl.replaceChildren(...recipients.map(rowFor));
   updateSummary(recipients);
+}
+
+// Take a removed delivery off the list, the map and the alert rings at once.
+function dropRecipient(id) {
+  currentRecipients = currentRecipients.filter((item) => item.id !== id);
+  expanded.delete(id);
+
+  const marker = markers.get(id);
+  if (marker) {
+    map.removeLayer(marker);
+    markers.delete(id);
+  }
+
+  const ring = arrivalRings.get(id);
+  if (ring) {
+    map.removeLayer(ring);
+    arrivalRings.delete(id);
+  }
+
+  renderList(currentRecipients);
+  // An empty route means there is room for a new name, so offer the form.
+  if (currentRecipients.length === 0) setFormOpen(true);
 }
 
 function applyRecipient(updated) {
@@ -383,6 +444,10 @@ function connectLive() {
 
     if (message.type === 'arrival') {
       handleArrival(message.recipient);
+    }
+
+    if (message.type === 'recipient-removed') {
+      dropRecipient(message.id);
     }
   });
 

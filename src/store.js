@@ -95,6 +95,16 @@ function markArrived(id) {
   return recipient;
 }
 
+function removeRecipient(id) {
+  const current = load();
+  const index = current.recipients.findIndex((item) => item.id === id);
+  if (index === -1) return null;
+
+  const [removed] = current.recipients.splice(index, 1);
+  save();
+  return removed;
+}
+
 function setMonitored(id, monitored) {
   const current = load();
   const rider = current.riders.find((item) => item.id === id);
@@ -116,4 +126,13 @@ function setPosition(riderId, lat, lng) {
   return position;
 }
 
-module.exports = { getState, addRecipient, setReceived, markArrived, setMonitored, findRiderByToken, setPosition };
+module.exports = {
+  getState,
+  addRecipient,
+  setReceived,
+  markArrived,
+  removeRecipient,
+  setMonitored,
+  findRiderByToken,
+  setPosition
+};

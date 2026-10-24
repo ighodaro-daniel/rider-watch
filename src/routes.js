@@ -41,6 +41,22 @@ router.post('/api/recipients/:id/received', requireOwner, (req, res) => {
   return res.json(recipient);
 });
 
+// Clearing a finished delivery frees the panel for new names. Only a delivery
+// already ticked received can go, so a stray click can never delete a parcel
+// that is still on the route.
+router.delete('/api/recipients/:id', requireOwner, (req, res) => {
+  const recipient = store.getState().recipients.find((item) => item.id === req.params.id);
+  if (!recipient) return res.status(404).json({ error: 'That recipient no longer exists.' });
+  if (!recipient.received) {
+    return res.status(409).json({ error: 'Tick the delivery as received before removing it.' });
+  }
+
+  store.removeRecipient(recipient.id);
+  // Tell every open dashboard, so the name disappears everywhere at once.
+  broadcast({ type: 'recipient-removed', id: recipient.id });
+  return res.json({ removed: recipient.id });
+});
+
 router.post('/api/riders/:id/monitor', requireOwner, (req, res) => {
   const rider = store.setMonitored(req.params.id, req.body.monitored);
   if (!rider) return res.status(404).json({ error: 'That rider no longer exists.' });
