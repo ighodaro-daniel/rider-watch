@@ -1,10 +1,13 @@
-const map = L.map('map', { zoomControl: false }).setView([6.5244, 3.3792], 12);
+const map = L.map('map', { zoomControl: false, maxZoom: 16 }).setView([6.5244, 3.3792], 12);
 
 L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO',
-  maxZoom: 19
+// Esri's dark grey canvas: dark basemap with no API key required.
+// CARTO's basemaps.cartocdn.com endpoints now answer with an "API KEY REQUIRED"
+// placeholder tile, so they were replaced here.
+const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+  maxZoom: 16
 });
 
 tiles.on('tileerror', () => {
