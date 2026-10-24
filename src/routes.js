@@ -3,6 +3,7 @@ const { lookupAddress, sampleAddresses } = require('./geo');
 const store = require('./store');
 const { requireOwner } = require('./auth');
 const { broadcast } = require('./ws');
+const { checkArrivals } = require('./arrival');
 
 const router = express.Router();
 
@@ -63,7 +64,14 @@ router.post('/api/location/:token', (req, res) => {
 
   const position = store.setPosition(rider.id, lat, lng);
   broadcast({ type: 'position', riderId: rider.id, name: rider.name, lat, lng, at: position.at });
-  return res.json({ ok: true, rider: rider.name, position });
+
+  // Within 50 m of a recipient means that delivery has arrived; alert once each.
+  const arrivals = checkArrivals(position);
+  for (const recipient of arrivals) {
+    broadcast({ type: 'arrival', riderId: rider.id, rider: rider.name, recipient });
+  }
+
+  return res.json({ ok: true, rider: rider.name, position, arrivals });
 });
 
 module.exports = router;

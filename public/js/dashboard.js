@@ -108,12 +108,26 @@ function rowFor(recipient) {
   return item;
 }
 
+function updateSummary(recipients) {
+  const summary = document.getElementById('summary');
+  if (!summary) return;
+
+  const arrived = recipients.filter((recipient) => recipient.arrived).length;
+  const received = recipients.filter((recipient) => recipient.received).length;
+  if (!recipients.length) {
+    summary.textContent = 'No recipients yet';
+    return;
+  }
+  summary.textContent = `${recipients.length} to reach · ${arrived} arrived · ${received} received`;
+}
+
 function renderList(recipients) {
   currentRecipients = recipients;
   countEl.textContent = String(recipients.length).padStart(2, '0');
   emptyEl.hidden = recipients.length > 0;
   listEl.hidden = recipients.length === 0;
   listEl.replaceChildren(...recipients.map(rowFor));
+  updateSummary(recipients);
 }
 
 function applyRecipient(updated) {
@@ -271,10 +285,40 @@ function riderLayer(riderId) {
   return marker;
 }
 
+// Positions arrive about once a second; easing the dot between them keeps the
+// movement smooth instead of jumping.
+const riderTargets = new Map();
+
+function easeRiders() {
+  for (const [riderId, target] of riderTargets) {
+    const marker = riderMarkers.get(riderId);
+    if (!marker || !marker._map) continue;
+
+    const current = marker.getLatLng();
+    const lat = current.lat + (target.lat - current.lat) * 0.18;
+    const lng = current.lng + (target.lng - current.lng) * 0.18;
+
+    if (Math.abs(target.lat - lat) < 1e-6 && Math.abs(target.lng - lng) < 1e-6) {
+      marker.setLatLng(target);
+      riderTargets.delete(riderId);
+    } else {
+      marker.setLatLng([lat, lng]);
+    }
+  }
+  requestAnimationFrame(easeRiders);
+}
+requestAnimationFrame(easeRiders);
+
 function moveRider(riderId, lat, lng) {
   const marker = riderLayer(riderId);
-  const latlng = [lat, lng];
-  marker.setLatLng(latlng).addTo(map);
+  const latlng = L.latLng(lat, lng);
+
+  if (marker._map) {
+    riderTargets.set(riderId, latlng);
+  } else {
+    // First sighting: place it straight away rather than easing in from nowhere.
+    marker.setLatLng(latlng).addTo(map);
+  }
 
   const trail = riderTrails.get(riderId);
   trail.addLatLng(latlng);
@@ -326,11 +370,41 @@ function connectLive() {
     if (message.type === 'rider') {
       applyRider(message.rider);
     }
+
+    if (message.type === 'arrival') {
+      handleArrival(message.recipient);
+    }
   });
 
   socket.addEventListener('close', () => {
     setTimeout(connectLive, 2000);
   });
+}
+
+/* ---------- arrival ---------- */
+
+const arrivalRings = new Map();
+
+function pulseAt(recipient) {
+  const ring = L.circleMarker([recipient.lat, recipient.lng], {
+    radius: 8,
+    color: '#efb84b',
+    weight: 2,
+    fill: false,
+    className: 'arrival-ring'
+  }).addTo(map);
+
+  arrivalRings.set(recipient.id, ring);
+  setTimeout(() => {
+    map.removeLayer(ring);
+    arrivalRings.delete(recipient.id);
+  }, 5000);
+}
+
+function handleArrival(recipient) {
+  applyRecipient(recipient);
+  pulseAt(recipient);
+  if (typeof playArrivalAlert === 'function') playArrivalAlert();
 }
 
 /* ---------- startup ---------- */
@@ -379,6 +453,17 @@ formEl.addEventListener('submit', async (event) => {
   map.panTo([body.lat, body.lng]);
 });
 
+function startClock() {
+  const clock = document.getElementById('clock');
+  if (!clock) return;
+  const tick = () => {
+    clock.textContent = `LOCAL / ${new Date().toLocaleTimeString('en-GB')}`;
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
 refresh();
 loadSampleAddresses();
 connectLive();
+startClock();

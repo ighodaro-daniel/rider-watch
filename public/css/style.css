@@ -55,6 +55,8 @@ h2 { margin: 10px 0 0; font-size: 21px; letter-spacing: -.04em; }
 .received-box { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; }
 .recipient-info { padding: 0 2px 12px; color: var(--muted); font: 11px/1.5 'DM Mono', monospace; }
 .recipient-info[hidden] { display: none; }
+.recipient.is-arrived .recipient-row { background: linear-gradient(90deg, rgba(239, 184, 75, .14), transparent 70%); }
+.recipient.is-received .recipient-row { opacity: .62; }
 .recipient.is-received .recipient-name { color: var(--muted); text-decoration: line-through; }
 .recipient.is-arrived .recipient-name::after { margin-left: 4px; color: #efb84b; content: '· arrived'; font: 500 9px 'DM Mono', monospace; letter-spacing: .1em; }
 .panel-footer { display: flex; align-items: center; gap: 8px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
@@ -74,6 +76,12 @@ h2 { margin: 10px 0 0; font-size: 21px; letter-spacing: -.04em; }
 .rider-link input { flex: 1; padding: 6px 8px; font: 9px 'DM Mono', monospace; color: #9cafaa; }
 .copy-button { padding: 6px 9px; color: var(--ink); background: rgba(255, 255, 255, .06); border: 1px solid var(--line); font-size: 9px; letter-spacing: .06em; }
 .rider-icon { background: none; border: 0; }
+.arrival-ring { animation: arrival-pulse 1.7s ease-out 3; }
+@keyframes arrival-pulse {
+  0% { opacity: .95; stroke-width: 2px; }
+  70% { opacity: .35; stroke-width: 12px; }
+  100% { opacity: 0; stroke-width: 18px; }
+}
 .rider-dot { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 12px var(--teal), 0 0 34px rgba(94, 232, 195, .5); }
 .rider-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 78% 20%, rgba(36, 112, 93, .2), transparent 35%), #071110; }
 .rider-card { width: min(440px, 100%); }
