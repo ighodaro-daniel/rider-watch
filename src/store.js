@@ -1,0 +1,77 @@
+const path = require('node:path');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
+
+const dataDir = path.join(__dirname, '..', 'data');
+const dbPath = path.join(dataDir, 'db.json');
+
+const defaultRiders = [
+  { id: 'rider-1', name: 'Rider 1' },
+  { id: 'rider-2', name: 'Rider 2' }
+];
+
+function freshRiders() {
+  return defaultRiders.map((rider) => ({
+    ...rider,
+    monitored: false,
+    token: crypto.randomBytes(8).toString('hex')
+  }));
+}
+
+function freshDb() {
+  return { recipients: [], riders: freshRiders() };
+}
+
+let db = null;
+
+// Read data/db.json once at startup; create it on first run.
+function load() {
+  if (db) return db;
+  try {
+    db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  } catch {
+    db = freshDb();
+  }
+  db.recipients = db.recipients || [];
+  db.riders = db.riders && db.riders.length ? db.riders : freshRiders();
+  save();
+  return db;
+}
+
+function save() {
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(dbPath, `${JSON.stringify(db, null, 2)}\n`);
+}
+
+function getState() {
+  const current = load();
+  return { recipients: current.recipients, riders: current.riders };
+}
+
+function addRecipient({ name, address, lat, lng }) {
+  const current = load();
+  const recipient = {
+    id: crypto.randomUUID(),
+    name,
+    address,
+    lat,
+    lng,
+    arrived: false,
+    received: false
+  };
+  current.recipients.push(recipient);
+  save();
+  return recipient;
+}
+
+function setReceived(id, received) {
+  const current = load();
+  const recipient = current.recipients.find((item) => item.id === id);
+  if (!recipient) return null;
+
+  recipient.received = Boolean(received);
+  save();
+  return recipient;
+}
+
+module.exports = { getState, addRecipient, setReceived };

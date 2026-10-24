@@ -1,0 +1,38 @@
+[
+  {
+    "label": "Adeola Odeku",
+    "address": "12 Adeola Odeku Street, Victoria Island, Lagos",
+    "lat": 6.4281,
+    "lng": 3.4219
+  },
+  {
+    "label": "Admiralty Way",
+    "address": "Admiralty Way, Lekki Phase 1, Lagos",
+    "lat": 6.4478,
+    "lng": 3.4723
+  },
+  {
+    "label": "Ikeja City Mall",
+    "address": "Ikeja City Mall, Alausa, Ikeja, Lagos",
+    "lat": 6.6018,
+    "lng": 3.3515
+  },
+  {
+    "label": "Herbert Macaulay",
+    "address": "Herbert Macaulay Way, Yaba, Lagos",
+    "lat": 6.5095,
+    "lng": 3.3711
+  },
+  {
+    "label": "Bode Thomas",
+    "address": "Bode Thomas Street, Surulere, Lagos",
+    "lat": 6.4969,
+    "lng": 3.3481
+  },
+  {
+    "label": "Awolowo Road",
+    "address": "Awolowo Road, Ikoyi, Lagos",
+    "lat": 6.4541,
+    "lng": 3.4316
+  }
+]

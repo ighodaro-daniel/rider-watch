@@ -19,15 +19,26 @@
     <aside class="side-panel">
       <div class="panel-heading">
         <div><div class="eyebrow">TODAY'S ROUTE</div><h2>Recipients to reach</h2></div>
-        <span class="count">00</span>
+        <span class="count" id="recipient-count">00</span>
       </div>
-      <div class="empty-state">
+
+      <form id="add-recipient" class="add-form" autocomplete="off">
+        <input name="name" placeholder="Recipient name" aria-label="Recipient name" required>
+        <input name="address" placeholder="Address (sample addresses)" aria-label="Address" list="sample-addresses" required>
+        <datalist id="sample-addresses"></datalist>
+        <button type="submit">+ Add recipient</button>
+        <p id="form-error" class="form-error" hidden></p>
+      </form>
+
+      <div id="empty-state" class="empty-state">
         <div class="empty-orbit"><span>+</span></div>
         <h3>Your route is clear.</h3>
-        <p>Add a recipient to place the first destination on your live map.</p>
-        <button class="secondary-button" type="button">+ Add recipient</button>
+        <p>Add a recipient above to place the first destination on your live map.</p>
       </div>
-      <div class="panel-footer"><span class="status-dot"></span> Awaiting route data <span class="mono">v0.1</span></div>
+
+      <ol id="recipient-list" class="recipient-list" hidden></ol>
+
+      <div class="panel-footer"><span class="status-dot"></span> Awaiting route data <span class="mono">v0.2</span></div>
     </aside>
     <div id="map-notice" class="map-notice" hidden>Map imagery could not load. The live dashboard is still available.</div>
   </div>

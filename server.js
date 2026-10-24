@@ -2,6 +2,7 @@ const path = require('node:path');
 const express = require('express');
 const session = require('express-session');
 const { login, requireOwner } = require('./src/auth');
+const routes = require('./src/routes');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.post('/login', login);
 app.get('/dashboard.html', requireOwner, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
+app.use(routes);
 app.use('/vendor/leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist')));
 app.use(express.static(path.join(__dirname, 'public')));
 
