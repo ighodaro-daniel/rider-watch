@@ -1,0 +1,20 @@
+{
+  "name": "rider-watch",
+  "version": "1.0.0",
+  "description": "A live dispatch dashboard for a small rider team",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "simulate": "node scripts/simulate-rider.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "leaflet": "^1.9.4",
+    "ws": "^8.22.0"
+  }
+}

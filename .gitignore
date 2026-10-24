@@ -1,0 +1,9 @@
+/devpost/learner-profile.md
+.env
+.env.*
+!.env.example
+node_modules/
+config.json
+data/db.json
+*.Zone.Identifier
+*:Zone.Identifier

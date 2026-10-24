@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rider Watch | Live dashboard</title>
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-page">
+  <div class="map-shell">
+    <div id="map" aria-label="Live rider map"></div>
+    <div class="map-vignette"></div>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">✦</span><span>RIDER WATCH</span></div>
+      <div class="live-status"><span class="status-dot"></span> SYSTEM LIVE <span class="mono">LOCAL / 00:00</span></div>
+    </header>
+    <div class="map-label">LIVE OPERATIONS <span>·</span> SIMULATED RIDERS</div>
+    <aside class="side-panel">
+      <div class="panel-heading">
+        <div><div class="eyebrow">TODAY'S ROUTE</div><h2>Recipients to reach</h2></div>
+        <span class="count">00</span>
+      </div>
+      <div class="empty-state">
+        <div class="empty-orbit"><span>+</span></div>
+        <h3>Your route is clear.</h3>
+        <p>Add a recipient to place the first destination on your live map.</p>
+        <button class="secondary-button" type="button">+ Add recipient</button>
+      </div>
+      <div class="panel-footer"><span class="status-dot"></span> Awaiting route data <span class="mono">v0.1</span></div>
+    </aside>
+    <div id="map-notice" class="map-notice" hidden>Map imagery could not load. The live dashboard is still available.</div>
+  </div>
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
