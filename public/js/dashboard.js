@@ -27,6 +27,7 @@ const formEl = document.getElementById('add-recipient');
 const errorEl = document.getElementById('form-error');
 const datalistEl = document.getElementById('sample-addresses');
 const riderListEl = document.getElementById('rider-list');
+const toggleAddEl = document.getElementById('toggle-add');
 
 const riderMarkers = new Map();
 const riderTrails = new Map();
@@ -65,6 +66,7 @@ function markerFor(recipient) {
 function rowFor(recipient) {
   const item = document.createElement('li');
   item.className = 'recipient';
+  item.dataset.recipientId = recipient.id;
   if (recipient.received) item.classList.add('is-received');
   if (recipient.arrived) item.classList.add('is-arrived');
 
@@ -120,6 +122,15 @@ function updateSummary(recipients) {
   }
   summary.textContent = `${recipients.length} to reach · ${arrived} arrived · ${received} received`;
 }
+
+// The add form folds away once the route has entries, so the names being ticked
+// off get the panel's height instead.
+function setFormOpen(open) {
+  formEl.hidden = !open;
+  toggleAddEl.textContent = open ? 'Close' : '+ Add';
+}
+
+toggleAddEl.addEventListener('click', () => setFormOpen(formEl.hidden));
 
 function renderList(recipients) {
   currentRecipients = recipients;
@@ -211,11 +222,10 @@ function riderRow(rider) {
     const linkRow = document.createElement('div');
     linkRow.className = 'rider-link';
 
-    const link = document.createElement('input');
-    link.type = 'text';
-    link.readOnly = true;
-    link.value = `${location.origin}/track/${rider.token}`;
-    link.setAttribute('aria-label', `Tracking link for ${rider.name}`);
+    const link = document.createElement('span');
+    link.className = 'rider-url';
+    link.textContent = `${location.origin}/track/${rider.token}`;
+    link.title = link.textContent;
 
     const copy = document.createElement('button');
     copy.type = 'button';
@@ -223,11 +233,11 @@ function riderRow(rider) {
     copy.textContent = 'Copy';
     copy.addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(link.value);
+        await navigator.clipboard.writeText(link.textContent);
         copy.textContent = 'Copied';
         setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
       } catch {
-        link.select();
+        // Clipboard can be blocked; the full link is still in the tooltip.
       }
     });
 
@@ -405,6 +415,10 @@ function handleArrival(recipient) {
   applyRecipient(recipient);
   pulseAt(recipient);
   if (typeof playArrivalAlert === 'function') playArrivalAlert();
+
+  // Bring the arrived name into view, so the box is right there to tick.
+  const row = listEl.querySelector(`[data-recipient-id="${recipient.id}"]`);
+  if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 /* ---------- startup ---------- */
@@ -418,6 +432,8 @@ async function refresh() {
   body.riders.forEach((rider) => {
     if (rider.monitored && rider.position) moveRider(rider.id, rider.position.lat, rider.position.lng);
   });
+  // Keep the form folded away when there is already a route to work through.
+  setFormOpen(body.recipients.length === 0);
 }
 
 async function loadSampleAddresses() {
@@ -449,6 +465,7 @@ formEl.addEventListener('submit', async (event) => {
   formEl.reset();
   currentRecipients = [...currentRecipients, body];
   renderList(currentRecipients);
+  setFormOpen(false);
   markerFor(body);
   map.panTo([body.lat, body.lng]);
 });
