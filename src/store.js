@@ -10,6 +10,10 @@ const defaultRiders = [
   { id: 'rider-2', name: 'Rider 2' }
 ];
 
+// Latest position per rider. Kept in memory only, per the spec: after a restart
+// riders show as "not connected" until positions arrive again.
+const positions = new Map();
+
 function freshRiders() {
   return defaultRiders.map((rider) => ({
     ...rider,
@@ -43,9 +47,16 @@ function save() {
   fs.writeFileSync(dbPath, `${JSON.stringify(db, null, 2)}\n`);
 }
 
+function withPosition(rider) {
+  return { ...rider, position: positions.get(rider.id) || null };
+}
+
 function getState() {
   const current = load();
-  return { recipients: current.recipients, riders: current.riders };
+  return {
+    recipients: current.recipients,
+    riders: current.riders.map(withPosition)
+  };
 }
 
 function addRecipient({ name, address, lat, lng }) {
@@ -74,4 +85,25 @@ function setReceived(id, received) {
   return recipient;
 }
 
-module.exports = { getState, addRecipient, setReceived };
+function setMonitored(id, monitored) {
+  const current = load();
+  const rider = current.riders.find((item) => item.id === id);
+  if (!rider) return null;
+
+  rider.monitored = Boolean(monitored);
+  save();
+  return withPosition(rider);
+}
+
+function findRiderByToken(token) {
+  const current = load();
+  return current.riders.find((item) => item.token === token) || null;
+}
+
+function setPosition(riderId, lat, lng) {
+  const position = { lat, lng, at: Date.now() };
+  positions.set(riderId, position);
+  return position;
+}
+
+module.exports = { getState, addRecipient, setReceived, setMonitored, findRiderByToken, setPosition };

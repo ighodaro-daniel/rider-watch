@@ -15,6 +15,9 @@ tiles.on('tileerror', () => {
 });
 tiles.addTo(map);
 
+const SILENT_AFTER_MS = 8000;
+const TRAIL_POINTS = 60;
+
 const markers = new Map();
 const expanded = new Set();
 const listEl = document.getElementById('recipient-list');
@@ -23,6 +26,13 @@ const countEl = document.getElementById('recipient-count');
 const formEl = document.getElementById('add-recipient');
 const errorEl = document.getElementById('form-error');
 const datalistEl = document.getElementById('sample-addresses');
+const riderListEl = document.getElementById('rider-list');
+
+const riderMarkers = new Map();
+const riderTrails = new Map();
+
+let currentRecipients = [];
+let currentRiders = [];
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -32,6 +42,8 @@ async function api(url, options = {}) {
   const body = await response.json().catch(() => ({}));
   return { ok: response.ok, status: response.status, body };
 }
+
+/* ---------- recipients ---------- */
 
 function markerFor(recipient) {
   let marker = markers.get(recipient.id);
@@ -96,8 +108,6 @@ function rowFor(recipient) {
   return item;
 }
 
-let currentRecipients = [];
-
 function renderList(recipients) {
   currentRecipients = recipients;
   countEl.textContent = String(recipients.length).padStart(2, '0');
@@ -138,11 +148,202 @@ function showError(message, samples) {
   }
 }
 
+/* ---------- riders ---------- */
+
+function riderStatus(rider) {
+  if (!rider.monitored) return { text: 'OFF', live: false };
+  if (!rider.position) return { text: 'NOT CONNECTED', live: false };
+  const age = Date.now() - rider.position.at;
+  if (age > SILENT_AFTER_MS) return { text: 'NOT REPORTING', live: false };
+  return { text: 'LIVE', live: true };
+}
+
+function riderRow(rider) {
+  const wrap = document.createElement('div');
+  wrap.className = 'rider-row';
+  wrap.dataset.riderId = rider.id;
+
+  const name = document.createElement('span');
+  name.className = 'rider-name';
+  name.textContent = rider.name;
+
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.className = 'monitor-box';
+  toggle.checked = Boolean(rider.monitored);
+  toggle.setAttribute('aria-label', `Monitor ${rider.name}`);
+  toggle.addEventListener('change', async () => {
+    const { ok, body } = await api(`/api/riders/${rider.id}/monitor`, {
+      method: 'POST',
+      body: JSON.stringify({ monitored: toggle.checked })
+    });
+    if (!ok) {
+      toggle.checked = !toggle.checked;
+      return;
+    }
+    applyRider(body);
+  });
+
+  const status = document.createElement('span');
+  status.className = 'rider-status';
+  status.dataset.status = rider.id;
+  const state = riderStatus(rider);
+  status.textContent = state.text;
+  status.classList.toggle('is-live', state.live);
+
+  wrap.append(name, toggle, status);
+
+  if (rider.monitored) {
+    const linkRow = document.createElement('div');
+    linkRow.className = 'rider-link';
+
+    const link = document.createElement('input');
+    link.type = 'text';
+    link.readOnly = true;
+    link.value = `${location.origin}/track/${rider.token}`;
+    link.setAttribute('aria-label', `Tracking link for ${rider.name}`);
+
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'copy-button';
+    copy.textContent = 'Copy';
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(link.value);
+        copy.textContent = 'Copied';
+        setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
+      } catch {
+        link.select();
+      }
+    });
+
+    linkRow.append(link, copy);
+    wrap.append(linkRow);
+  }
+
+  return wrap;
+}
+
+function renderRiders(riders) {
+  currentRiders = riders;
+  riderListEl.replaceChildren(...riders.map(riderRow));
+}
+
+function applyRider(updated) {
+  const withoutPosition = currentRiders.find((rider) => rider.id === updated.id);
+  const merged = { ...withoutPosition, ...updated };
+  currentRiders = currentRiders.map((rider) => (rider.id === updated.id ? merged : rider));
+  renderRiders(currentRiders);
+
+  if (!merged.monitored) {
+    const marker = riderMarkers.get(merged.id);
+    if (marker) {
+      map.removeLayer(marker);
+      riderMarkers.delete(merged.id);
+    }
+    const trail = riderTrails.get(merged.id);
+    if (trail) {
+      map.removeLayer(trail);
+      riderTrails.delete(merged.id);
+    }
+    return;
+  }
+
+  if (merged.position) moveRider(merged.id, merged.position.lat, merged.position.lng);
+}
+
+function riderLayer(riderId) {
+  let marker = riderMarkers.get(riderId);
+  if (!marker) {
+    const icon = L.divIcon({
+      className: 'rider-icon',
+      html: '<span class="rider-dot"></span>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+    marker = L.marker([0, 0], { icon, zIndexOffset: 1000 });
+    riderMarkers.set(riderId, marker);
+
+    const trail = L.polyline([], { color: '#5ee8c3', weight: 2, opacity: 0.45 });
+    trail.addTo(map);
+    riderTrails.set(riderId, trail);
+  }
+  return marker;
+}
+
+function moveRider(riderId, lat, lng) {
+  const marker = riderLayer(riderId);
+  const latlng = [lat, lng];
+  marker.setLatLng(latlng).addTo(map);
+
+  const trail = riderTrails.get(riderId);
+  trail.addLatLng(latlng);
+  const points = trail.getLatLngs();
+  if (points.length > TRAIL_POINTS) trail.setLatLngs(points.slice(-TRAIL_POINTS));
+
+  const rider = currentRiders.find((item) => item.id === riderId);
+  if (rider) {
+    rider.position = { lat, lng, at: Date.now() };
+    const status = document.querySelector(`[data-status="${riderId}"]`);
+    if (status) {
+      status.textContent = 'LIVE';
+      status.classList.add('is-live');
+    }
+  }
+}
+
+// Riders go quiet when the simulator stops; refresh the labels so the dashboard tells the truth.
+setInterval(() => {
+  for (const rider of currentRiders) {
+    const status = document.querySelector(`[data-status="${rider.id}"]`);
+    if (!status) continue;
+    const state = riderStatus(rider);
+    status.textContent = state.text;
+    status.classList.toggle('is-live', state.live);
+  }
+}, 2000);
+
+/* ---------- live updates ---------- */
+
+function connectLive() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const socket = new WebSocket(`${protocol}//${location.host}`);
+
+  socket.addEventListener('message', (event) => {
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+
+    if (message.type === 'position') {
+      const rider = currentRiders.find((item) => item.id === message.riderId);
+      if (!rider || !rider.monitored) return;
+      moveRider(message.riderId, message.lat, message.lng);
+    }
+
+    if (message.type === 'rider') {
+      applyRider(message.rider);
+    }
+  });
+
+  socket.addEventListener('close', () => {
+    setTimeout(connectLive, 2000);
+  });
+}
+
+/* ---------- startup ---------- */
+
 async function refresh() {
   const { ok, body } = await api('/api/state');
   if (!ok) return;
   renderList(body.recipients);
   body.recipients.forEach(markerFor);
+  renderRiders(body.riders);
+  body.riders.forEach((rider) => {
+    if (rider.monitored && rider.position) moveRider(rider.id, rider.position.lat, rider.position.lng);
+  });
 }
 
 async function loadSampleAddresses() {
@@ -180,3 +381,4 @@ formEl.addEventListener('submit', async (event) => {
 
 refresh();
 loadSampleAddresses();
+connectLive();
