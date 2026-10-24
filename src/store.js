@@ -59,7 +59,7 @@ function getState() {
   };
 }
 
-function addRecipient({ name, address, lat, lng }) {
+function addRecipient({ name, address, lat, lng, riderId = null }) {
   const current = load();
   const recipient = {
     id: crypto.randomUUID(),
@@ -67,6 +67,7 @@ function addRecipient({ name, address, lat, lng }) {
     address,
     lat,
     lng,
+    riderId,
     arrived: false,
     received: false
   };
@@ -93,6 +94,23 @@ function markArrived(id) {
   recipient.arrived = true;
   save();
   return recipient;
+}
+
+// Apply a fresh deal from src/assign.js: [{ id, riderId }]. Saves once, however
+// many parcels were re-dealt.
+function setAssignments(assignments) {
+  const current = load();
+  let changed = false;
+
+  for (const { id, riderId } of assignments) {
+    const recipient = current.recipients.find((item) => item.id === id);
+    if (!recipient || recipient.riderId === riderId) continue;
+    recipient.riderId = riderId;
+    changed = true;
+  }
+
+  if (changed) save();
+  return current.recipients;
 }
 
 function removeRecipient(id) {
@@ -131,6 +149,7 @@ module.exports = {
   addRecipient,
   setReceived,
   markArrived,
+  setAssignments,
   removeRecipient,
   setMonitored,
   findRiderByToken,

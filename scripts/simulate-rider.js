@@ -1,5 +1,7 @@
 // SIMULATION: plays the riders so the dashboard can be demonstrated on one computer.
 // It posts to the same location endpoint a real phone uses.
+// Each rider walks the parcels dealt to it by the dashboard, so arrival alerts
+// come from the rider actually carrying that parcel.
 const path = require('node:path');
 const fs = require('node:fs');
 
@@ -7,7 +9,7 @@ const port = process.env.PORT || 3000;
 const base = `http://localhost:${port}`;
 const dbPath = path.join(__dirname, '..', 'data', 'db.json');
 
-// Where each rider starts from, and where it heads if there are no recipients yet.
+// Where each rider starts from, and where it heads if nothing is assigned yet.
 const startingPoints = {
   'rider-1': { lat: 6.4281, lng: 3.4219 }, // Victoria Island
   'rider-2': { lat: 6.6018, lng: 3.3515 }  // Ikeja
@@ -19,6 +21,9 @@ const fallbackDestinations = {
 
 const STEPS = 40;
 const TICK_MS = Number(process.env.SIM_TICK_MS || 1000);
+// How often the plan is re-read, so a parcel added or shuffled mid-demo is
+// picked up along the way instead of being ignored until the script restarts.
+const REREAD_MS = 3000;
 
 function readDb() {
   try {
@@ -29,21 +34,25 @@ function readDb() {
   }
 }
 
-function buildRoutes(riders, recipients) {
-  const routes = {};
-  riders.forEach((rider, index) => {
-    const start = startingPoints[rider.id];
-    if (!start) return;
+function readPlan() {
+  const db = readDb();
+  const riders = (db.riders || []).filter((rider) => startingPoints[rider.id]);
+  const recipients = db.recipients || [];
+  return { riders, recipients };
+}
 
-    // Rider 1 heads for the first recipient, rider 2 for the next one, so the
-    // demo reaches a destination without any extra setup.
-    const recipient = recipients.length ? recipients[index % recipients.length] : null;
-    routes[rider.id] = {
-      points: [start, recipient ? { lat: recipient.lat, lng: recipient.lng } : fallbackDestinations[rider.id]],
-      target: recipient ? recipient.name : 'a sample address'
-    };
-  });
-  return routes;
+// A rider's route: its start, then the parcels dealt to it that are still out.
+function buildRoute(rider, recipients) {
+  const start = startingPoints[rider.id];
+  const stops = recipients
+    .filter((recipient) => !recipient.received && recipient.riderId === rider.id)
+    .map((recipient) => ({ lat: recipient.lat, lng: recipient.lng, name: recipient.name }));
+
+  const points = stops.length
+    ? [start, ...stops]
+    : [start, { ...fallbackDestinations[rider.id], name: 'a sample address' }];
+
+  return { points, stops };
 }
 
 function pointAlong([from, to], t) {
@@ -51,6 +60,38 @@ function pointAlong([from, to], t) {
     lat: from.lat + (to.lat - from.lat) * t,
     lng: from.lng + (to.lng - from.lng) * t
   };
+}
+
+// Walk from stop to stop, then turn round and come back, so the dot keeps moving
+// and a new stop appended mid-demo is reached on the next pass.
+function advance(route, cursor) {
+  const last = route.points.length - 1;
+  let { from, to, t, dir } = cursor;
+
+  if (last < 1) return route.points[0];
+
+  t += 1 / STEPS;
+  if (t >= 1) {
+    t = 0;
+    from = to;
+    if (to === last && dir === 1) dir = -1;
+    else if (to === 0 && dir === -1) dir = 1;
+    to = from + dir;
+  }
+
+  Object.assign(cursor, { from, to, t, dir });
+  return pointAlong([route.points[from], route.points[to]], t);
+}
+
+// Shrinking route (a parcel removed) must not leave the cursor pointing past the end.
+function clampCursor(route, cursor) {
+  const last = route.points.length - 1;
+  cursor.from = Math.min(cursor.from, last);
+  cursor.to = Math.min(cursor.to, last);
+  if (cursor.from === cursor.to) {
+    cursor.to = cursor.from === last ? Math.max(0, last - 1) : cursor.from + 1;
+  }
+  cursor.dir = cursor.to === cursor.from + 1 ? 1 : -1;
 }
 
 async function post(token, name, position) {
@@ -69,20 +110,35 @@ async function post(token, name, position) {
   }
 }
 
-const db = readDb();
-const recipients = db.recipients || [];
-const riders = (db.riders || []).filter((rider) => startingPoints[rider.id]);
-const routes = buildRoutes(riders, recipients);
-
+const { riders, recipients } = readPlan();
 if (!riders.length) {
   console.error('No riders found in data/db.json.');
   process.exit(1);
 }
 
-console.log(`Simulating ${riders.map((rider) => rider.name).join(' and ')} every ${TICK_MS}ms.`);
-for (const rider of riders) {
-  console.log(`  ${rider.name} → ${routes[rider.id].target}`);
+const routes = new Map();
+const cursors = new Map();
+const described = new Map();
+
+function refreshRoutes() {
+  const plan = readPlan();
+  for (const rider of plan.riders) {
+    const route = buildRoute(rider, plan.recipients);
+    routes.set(rider.id, route);
+
+    const description = route.stops.map((stop) => stop.name).join(', ') || 'a sample address';
+    if (described.get(rider.id) !== description) {
+      described.set(rider.id, description);
+      console.log(`  ${rider.name} → ${description}`);
+    }
+
+    if (!cursors.has(rider.id)) cursors.set(rider.id, { from: 0, to: 1, t: 0, dir: 1 });
+    else clampCursor(route, cursors.get(rider.id));
+  }
 }
+
+console.log(`Simulating ${riders.map((rider) => rider.name).join(' and ')} every ${TICK_MS}ms.`);
+refreshRoutes();
 
 const unmonitored = riders.filter((rider) => !rider.monitored).map((rider) => rider.name);
 if (unmonitored.length) {
@@ -90,15 +146,15 @@ if (unmonitored.length) {
 }
 console.log('Press Ctrl+C to stop.\n');
 
-let step = 0;
+let ticks = 0;
 setInterval(async () => {
-  step += 1;
-  // Ping-pong: out to the destination, then back, so the dots keep moving.
-  const phase = step % (STEPS * 2);
-  const t = phase <= STEPS ? phase / STEPS : (STEPS * 2 - phase) / STEPS;
+  ticks += 1;
+  if (ticks % Math.max(1, Math.round(REREAD_MS / TICK_MS)) === 1) refreshRoutes();
 
   for (const rider of riders) {
-    const position = pointAlong(routes[rider.id].points, t);
+    const route = routes.get(rider.id);
+    if (!route) continue;
+    const position = advance(route, cursors.get(rider.id));
     await post(rider.token, rider.name, position);
   }
 }, TICK_MS);

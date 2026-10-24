@@ -60,6 +60,7 @@ h2 { margin: 10px 0 0; font-size: 21px; letter-spacing: -.04em; }
 .recipient:hover { background: rgba(255, 255, 255, .03); }
 .recipient-name { flex: 1; padding: 0; border: 0; color: var(--ink); background: none; font: 600 13px Manrope, sans-serif; text-align: left; }
 .recipient-name:hover { color: var(--teal); }
+.rider-chip { flex: 0 0 auto; padding: 2px 5px; border: 1px solid currentColor; border-radius: 3px; opacity: .8; font: 500 9px 'DM Mono', monospace; letter-spacing: .04em; }
 .received-box { flex: 0 0 auto; width: 22px; height: 22px; accent-color: var(--teal); cursor: pointer; }
 .remove-button { flex: 0 0 auto; display: grid; place-items: center; min-width: 27px; height: 27px; padding: 0 7px; border: 1px solid rgba(181, 226, 214, .16); border-radius: 4px; color: #7e938f; background: none; font: 500 10px/1 'DM Mono', monospace; letter-spacing: .06em; cursor: pointer; }
 .remove-button:hover { color: #ff9c8a; border-color: rgba(255, 156, 138, .4); }

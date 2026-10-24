@@ -28,9 +28,28 @@ const errorEl = document.getElementById('form-error');
 const datalistEl = document.getElementById('sample-addresses');
 const riderListEl = document.getElementById('rider-list');
 const toggleAddEl = document.getElementById('toggle-add');
+const shuffleEl = document.getElementById('shuffle-riders');
 
 const riderMarkers = new Map();
 const riderTrails = new Map();
+
+// Rider 1 in teal, rider 2 in violet, so a dot on the map matches the tag on
+// the delivery it is carrying.
+const RIDER_COLORS = ['#5ee8c3', '#a99bff'];
+
+function riderIndex(riderId) {
+  return currentRiders.findIndex((rider) => rider.id === riderId);
+}
+
+function riderColor(riderId) {
+  const index = riderIndex(riderId);
+  return RIDER_COLORS[(index < 0 ? 0 : index) % RIDER_COLORS.length];
+}
+
+function riderTag(riderId) {
+  const index = riderIndex(riderId);
+  return index < 0 ? '' : `R${index + 1}`;
+}
 
 let currentRecipients = [];
 let currentRiders = [];
@@ -58,7 +77,7 @@ function markerFor(recipient) {
     }).addTo(map);
     markers.set(recipient.id, marker);
   }
-  marker.bindTooltip(recipient.name, { direction: 'top', offset: [0, -8] });
+  marker.bindTooltip(`${recipient.name}${riderTag(recipient.riderId) ? ` · ${riderTag(recipient.riderId)}` : ''}`, { direction: 'top', offset: [0, -8] });
   marker.setStyle({ color: recipient.received ? '#5ee8c3' : '#efb84b', fillColor: recipient.received ? '#5ee8c3' : '#efb84b' });
   return marker;
 }
@@ -137,7 +156,20 @@ function rowFor(recipient) {
     else tick.checked = !tick.checked;
   });
 
-  row.append(nameButton, tick);
+  row.append(nameButton);
+
+  // Which rider has this one. Colour matches that rider's dot on the map.
+  if (recipient.riderId) {
+    const owner = currentRiders.find((rider) => rider.id === recipient.riderId);
+    const chip = document.createElement('span');
+    chip.className = 'rider-chip';
+    chip.textContent = riderTag(recipient.riderId);
+    chip.style.color = riderColor(recipient.riderId);
+    chip.title = owner ? `${recipient.name} is with ${owner.name}` : '';
+    row.append(chip);
+  }
+
+  row.append(tick);
   if (recipient.received) row.append(removeButtonFor(recipient));
 
   const info = document.createElement('div');
@@ -340,16 +372,17 @@ function applyRider(updated) {
 function riderLayer(riderId) {
   let marker = riderMarkers.get(riderId);
   if (!marker) {
+    const color = riderColor(riderId);
     const icon = L.divIcon({
       className: 'rider-icon',
-      html: '<span class="rider-dot"></span>',
+      html: `<span class="rider-dot" style="background:${color};box-shadow:0 0 12px ${color},0 0 34px ${color}80"></span>`,
       iconSize: [16, 16],
       iconAnchor: [8, 8]
     });
     marker = L.marker([0, 0], { icon, zIndexOffset: 1000 });
     riderMarkers.set(riderId, marker);
 
-    const trail = L.polyline([], { color: '#5ee8c3', weight: 2, opacity: 0.45 });
+    const trail = L.polyline([], { color, weight: 2, opacity: 0.45 });
     trail.addTo(map);
     riderTrails.set(riderId, trail);
   }
@@ -449,6 +482,10 @@ function connectLive() {
     if (message.type === 'recipient-removed') {
       dropRecipient(message.id);
     }
+
+    if (message.type === 'assignments') {
+      applyAssignments(message.recipients);
+    }
   });
 
   socket.addEventListener('close', () => {
@@ -486,14 +523,32 @@ function handleArrival(recipient) {
   if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
+/* ---------- dispatch ---------- */
+
+// A new deal from the server: same destinations, different riders.
+function applyAssignments(recipients) {
+  currentRecipients = recipients;
+  renderList(recipients);
+  recipients.forEach(markerFor);
+}
+
+shuffleEl.addEventListener('click', async () => {
+  const { ok, body } = await api('/api/assign', { method: 'POST' });
+  if (!ok) return;
+  applyAssignments(body.recipients);
+  shuffleEl.textContent = 'Shuffled';
+  setTimeout(() => { shuffleEl.textContent = '⇄ Shuffle'; }, 1200);
+});
+
 /* ---------- startup ---------- */
 
 async function refresh() {
   const { ok, body } = await api('/api/state');
   if (!ok) return;
+  // Riders first: the names carry the rider tag, so it needs to know who is who.
+  renderRiders(body.riders);
   renderList(body.recipients);
   body.recipients.forEach(markerFor);
-  renderRiders(body.riders);
   body.riders.forEach((rider) => {
     if (rider.monitored && rider.position) moveRider(rider.id, rider.position.lat, rider.position.lng);
   });

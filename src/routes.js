@@ -4,6 +4,7 @@ const store = require('./store');
 const { requireOwner } = require('./auth');
 const { broadcast } = require('./ws');
 const { checkArrivals } = require('./arrival');
+const assign = require('./assign');
 
 const router = express.Router();
 
@@ -31,7 +32,18 @@ router.post('/api/recipients', requireOwner, (req, res) => {
     });
   }
 
-  const recipient = store.addRecipient({ name, address: place.address, lat: place.lat, lng: place.lng });
+  // Every new parcel is dealt to a rider as it arrives, so the owner never has
+  // to think about who carries what until they want to re-deal it.
+  const state = store.getState();
+  const rider = assign.pickRider(state.riders, state.recipients);
+
+  const recipient = store.addRecipient({
+    name,
+    address: place.address,
+    lat: place.lat,
+    lng: place.lng,
+    riderId: rider ? rider.id : null
+  });
   return res.status(201).json(recipient);
 });
 
@@ -55,6 +67,17 @@ router.delete('/api/recipients/:id', requireOwner, (req, res) => {
   // Tell every open dashboard, so the name disappears everywhere at once.
   broadcast({ type: 'recipient-removed', id: recipient.id });
   return res.json({ removed: recipient.id });
+});
+
+// Re-deal every unfinished parcel between the riders, in random order. Every
+// open dashboard takes the new plan straight away.
+router.post('/api/assign', requireOwner, (req, res) => {
+  const state = store.getState();
+  const assignments = assign.deal(state.riders, state.recipients);
+  const recipients = store.setAssignments(assignments);
+
+  broadcast({ type: 'assignments', recipients });
+  return res.json({ recipients });
 });
 
 router.post('/api/riders/:id/monitor', requireOwner, (req, res) => {
@@ -84,7 +107,7 @@ router.post('/api/location/:token', (req, res) => {
   // Within 50 m of a recipient means that delivery has arrived; alert once each.
   // Only monitored riders count, per `prd.md > Live map and arrival alert` — a
   // rider the owner has not put on the job must not change the route.
-  const arrivals = rider.monitored ? checkArrivals(position) : [];
+  const arrivals = rider.monitored ? checkArrivals(position, rider.id) : [];
   for (const recipient of arrivals) {
     broadcast({ type: 'arrival', riderId: rider.id, rider: rider.name, recipient });
   }

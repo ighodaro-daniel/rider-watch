@@ -38,9 +38,9 @@ npm run simulate
 ```
 
 1. Log in — the dashboard opens with a dark map and an empty side panel.
-2. Add a recipient: type a name and one of the sample addresses (start typing and the list suggests them).
+2. Add a recipient: type a name and one of the sample addresses (start typing and the list suggests them). The name arrives already dealt to a rider — a small **R1** or **R2** tag beside it.
 3. Tick **Rider 1** and **Rider 2**. A tracking link appears for each.
-4. Run `npm run simulate`. Teal dots appear and move along their routes, leaving fading trails.
+4. Run `npm run simulate`. A teal dot (Rider 1) and a violet dot (Rider 2) appear and move along their own routes, leaving fading trails. Each rider only walks the deliveries tagged with its number; **⇄ Shuffle** above the riders re-deals them and the dots take the new plan.
 5. When a rider comes within 50 metres of a recipient, that recipient is marked **arrived**, the panel highlights it, and the dashboard plays a short chime. Click anywhere on the page first so the browser allows sound.
 6. Tick the recipient's checkbox to mark it **received**. A **×** appears beside it: click once and it asks **Remove?**, click again to clear the finished delivery and free the list for a new name.
 7. Stop the simulator and the riders change to **NOT REPORTING** after a few seconds of silence.
@@ -55,6 +55,7 @@ npm run simulate
 | `src/store.js` | Reads and writes `data/db.json` |
 | `src/geo.js` | Sample-address lookup and distance between two points |
 | `src/arrival.js` | Turns a position within 50 m of a recipient into one arrival |
+| `src/assign.js` | Deals each delivery to a rider, at random but evenly |
 | `src/ws.js` | Pushes positions, rider changes and arrivals to the dashboard |
 | `public/js/dashboard.js` | Map, markers, trails, side panel, live updates |
 | `public/js/alert.js` | Arrival chime, generated in the browser (no audio file) |
