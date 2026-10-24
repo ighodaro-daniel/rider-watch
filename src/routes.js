@@ -66,7 +66,9 @@ router.post('/api/location/:token', (req, res) => {
   broadcast({ type: 'position', riderId: rider.id, name: rider.name, lat, lng, at: position.at });
 
   // Within 50 m of a recipient means that delivery has arrived; alert once each.
-  const arrivals = checkArrivals(position);
+  // Only monitored riders count, per `prd.md > Live map and arrival alert` — a
+  // rider the owner has not put on the job must not change the route.
+  const arrivals = rider.monitored ? checkArrivals(position) : [];
   for (const recipient of arrivals) {
     broadcast({ type: 'arrival', riderId: rider.id, rider: rider.name, recipient });
   }
