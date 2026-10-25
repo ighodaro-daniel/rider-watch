@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rider Watch — App Map</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px 20px 64px; background: #0b1211; color: #dbe9e6;
+         font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 28px; letter-spacing: .01em; }
+  h2 { margin: 40px 0 10px; font-size: 19px; color: #9ff0d9; }
+  h3 { margin: 22px 0 6px; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; color: #7fe0c6; }
+  p, li { max-width: 70ch; }
+  .lede { color: #a9c2bd; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; }
+  code { padding: 1px 5px; border-radius: 3px; background: rgba(159, 240, 217, .1); color: #c8f7ea; }
+  pre { overflow-x: auto; padding: 12px 14px; border: 1px solid rgba(159, 240, 217, .18);
+        border-radius: 6px; background: #0d1917; }
+  details { margin: 8px 0 0; }
+  summary { cursor: pointer; color: #9ff0d9; }
+  .flow { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; counter-reset: step; }
+  .flow li { position: relative; padding: 12px 14px 12px 46px; border: 1px solid rgba(159, 240, 217, .22);
+             border-radius: 6px; background: rgba(159, 240, 217, .04); max-width: none; }
+  .flow li::before { counter-increment: step; content: counter(step); position: absolute; left: 14px; top: 12px;
+                     display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%;
+                     background: rgba(94, 232, 195, .18); color: #9ff0d9; font-size: 11px; }
+  .flow .arrow { margin-left: 6px; color: #5ee8c3; }
+  .flow small { display: block; color: #93aca7; }
+  .stop { margin: 18px 0 0; padding: 14px 16px; border-left: 3px solid #5ee8c3;
+          background: rgba(94, 232, 195, .05); border-radius: 0 6px 6px 0; }
+  .stop h4 { margin: 0 0 4px; font-size: 15px; }
+  .stop p { margin: 6px 0 0; }
+  .note { margin-top: 10px; color: #93aca7; font-size: 14px; }
+  .tag { display: inline-block; margin-right: 6px; padding: 1px 7px; border: 1px solid currentColor;
+         border-radius: 999px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #efb84b; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid rgba(159, 240, 217, .14); text-align: left; vertical-align: top; }
+  th { color: #9ff0d9; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid rgba(159, 240, 217, .14);
+           color: #7f9893; font-size: 13px; }
+  a { color: #9ff0d9; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid #efb84b; outline-offset: 2px; }
+  mark { padding: 0 3px; border-radius: 2px; background: rgba(239, 184, 75, .28); color: #ffdca3; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rider Watch — App Map</h1>
+  <p class="lede">A take-home guide to the finished proof of concept: what one action does, where its code lives, and where to start when you want to change something.</p>
+
+  <h2>What the app is</h2>
+  <p>Rider Watch is one small Node.js/Express web app that runs on your computer. The owner signs in, adds recipients to reach, and watches two riders move on a dark Leaflet map — either simulated from the dashboard's <strong>▶ Demo</strong> control or shared from a rider's real phone over a temporary HTTPS link. When a rider reaches the recipient it is carrying, the delivery is marked arrived, the dashboard chimes, and the owner ticks it received. Recipients, monitoring choices and received ticks live in <code>data/db.json</code>; live positions stay in server memory. The plan and reasoning are in <code>devpost/prd.md</code> and <code>devpost/spec.md</code>.</p>
+
+  <h2>One action: press ▶ Demo</h2>
+  <p>You have already used this one. Here is the whole path from your click to the moving dot, in the order it happens.</p>
+  <ol class="flow">
+    <li><strong>Click ▶ Demo</strong> in the RIDERS panel. <span class="arrow">→</span>
+      <small><code>public/dashboard.html</code>, button <code>#demo-riders</code>. The browser runs the click handler in <code>public/js/dashboard.js</code>.</small></li>
+    <li><strong>Ask the server to start or stop.</strong> <span class="arrow">→</span>
+      <small><code>POST /api/dev/simulation</code> with <code>{ on: true }</code>. <code>src/routes.js</code> checks the owner session first, then calls <code>demo.start()</code> or <code>demo.stop()</code>.</small></li>
+    <li><strong>The server walks the riders.</strong> <span class="arrow">→</span>
+      <small><code>src/demo.js</code>, <code>tick()</code> once a second. <code>src/route-plan.js</code> moves each rider one eightieth of the way along its current leg, and the new position is saved and broadcast.</small></li>
+    <li><strong>The dashboard receives it and moves the dot.</strong> <span class="arrow">→</span>
+      <small><code>src/ws.js</code> <code>broadcast()</code> sends a <code>position</code> message; <code>connectLive()</code> and <code>moveRider()</code> in <code>public/js/dashboard.js</code> ease the dot across the second.</small></li>
+    <li><strong>Result on screen.</strong> <span class="arrow">→</span>
+      <small>The dot glides and leaves a trail. If that rider's parcel is within 50&nbsp;m, <code>src/arrival.js</code> marks it arrived, the alert message reaches the dashboard, and you hear the chime.</small></li>
+  </ol>
+
+  <h2>Route to follow in the code</h2>
+  <p class="note">This is a reference route built from the finished code, not a record of a tour. Open the project in your editor and search these anchors; the line numbers are conveniences and may drift.</p>
+
+  <div class="stop">
+    <h4>Stop 1 — the click: <code>public/js/dashboard.js</code></h4>
+    <p>Search <code>demo riders (dev mode)</code>. The handler around line 662 posts the new state to the server; <code>renderDemo()</code> (line 654) changes the label between <em>▶ Demo</em> and <em>■ Stop demo</em>. The same function is called when the live socket reports a change, so a second tab stays in step.</p>
+    <details>
+      <summary>Show the shape of it</summary>
+      <pre><code>demoEl.addEventListener('click', async () =&gt; {
+  const { ok, body } = await api('/api/dev/simulation', {
+    method: 'POST',
+    body: JSON.stringify({ on: !simulationRunning })
+  });
+  if (!ok) return;
+  simulationRunning = Boolean(body.running);
+  renderDemo();
+});</code></pre>
+    </details>
+  </div>
+
+  <div class="stop">
+    <h4>Stop 2 — the guarded door: <code>src/routes.js</code></h4>
+    <p>Search <code>/api/dev/simulation</code> (line 114). <code>requireOwner</code> means a signed-out browser is redirected instead of starting the demo — dev mode is still the owner's dashboard, not a public switch. The reply is just <code>{ running: true }</code> or <code>{ running: false }</code>.</p>
+  </div>
+
+  <div class="stop">
+    <h4>Stop 3 — the movement: <code>src/demo.js</code></h4>
+    <p>Search <code>function tick</code> (line 35). Each tick calls <code>plan.advance(route, cursor)</code> from <code>src/route-plan.js</code> to get the next point, <code>store.setPosition(...)</code> to remember it, <code>broadcast({ type: 'position', ... })</code> to push it out, and <code>checkArrivals(position, rider.id)</code> to see whether this rider reached one of its own parcels. On the browser side, <code>moveRider()</code> (line 517 of <code>public/js/dashboard.js</code>) sets the target and <code>easeRiders()</code> (line 497) glides toward it.</p>
+  </div>
+
+  <h2>To change this, start here</h2>
+  <table>
+    <thead><tr><th>What you see</th><th>Where to start</th></tr></thead>
+    <tbody>
+      <tr><td>Demo speed — a rider leg takes about 80 seconds</td><td><code>STEPS = 80</code> in <code>src/route-plan.js</code>. Higher is slower; it applies to both the Demo button and <code>npm run simulate</code>.</td></tr>
+      <tr><td>How smoothly the dot glides</td><td>The <code>0.07</code> easing factor in <code>easeRiders()</code>, <code>public/js/dashboard.js</code>.</td></tr>
+      <tr><td>The Demo button's word and colour</td><td><code>#demo-riders</code> in <code>public/dashboard.html</code>; <code>.ghost-button.is-live</code> in <code>public/css/style.css</code>.</td></tr>
+      <tr><td>How close counts as arrived</td><td><code>ARRIVAL_METERS = 50</code> in <code>src/arrival.js</code>.</td></tr>
+      <tr><td>The sample addresses</td><td><code>data/sample-addresses.json</code> — the simulation and the address form both read it.</td></tr>
+      <tr><td>Rider dot colours</td><td><code>RIDER_COLORS</code> in <code>public/js/dashboard.js</code>; the R1/R2 tags use the same colours.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>A practice to reuse</h2>
+  <p><span class="tag">Reproduce it outside the browser</span>When something looks wrong on screen, send the same request from a terminal before changing any interface code. It separates a UI problem from a server problem in one step.</p>
+  <p>This happened here. Signing in at <code>http://localhost:3000</code> while the phone-test server was running bounced straight back to the login page, which looked like a rejected passphrase. Sending the form with curl showed the real shape of it:</p>
+  <details>
+    <summary>Show the request that explained it</summary>
+    <pre><code>curl -i -X POST http://localhost:3000/login \
+  -d 'username=owner&amp;password=rider-watch'
+
+# HTTP/1.1 302 Found
+# Location: /dashboard.html
+# Set-Cookie: connect.sid=...; Path=/; HttpOnly; <mark>Secure</mark>; SameSite=Lax</code></pre>
+  </details>
+  <p>The server accepted the passphrase; it was the cookie that was wrong. In share mode the cookie had been marked HTTPS-only, so a plain-http browser would not send it back and <code>/dashboard.html</code> redirected to the login page. The fix was narrow — in <code>server.js</code>, mark the cookie Secure only when the request really is HTTPS (<code>req.secure</code>) — and the check that proves it stayed the same two curl commands: local login then dashboard 200, tunnel login then dashboard 200. Next time a screen misbehaves, try the request without the screen first; it usually says which half is broken.</p>
+
+  <h2>Running it again</h2>
+  <pre><code>npm install       # once
+npm start         # http://localhost:3000
+npm run share     # phone-test mode: adds a temporary HTTPS link (needs cloudflared)
+npm run simulate  # optional: the standalone simulator instead of ▶ Demo</code></pre>
+  <p>Sign in with the owner ID and passphrase from <code>config.json</code>. Tick a rider, then press <strong>▶ Demo</strong> to watch the route play. Data lives in <code>data/db.json</code> and is git-ignored, so restarting keeps your route.</p>
+
+  <footer>
+    Snapshot generated from commit <code>1912713</code> of this project. It describes the code at that point and can drift as the project changes; trust the source files over this page.
+  </footer>
+</main>
+</body>
+</html>

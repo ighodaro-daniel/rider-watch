@@ -54,13 +54,13 @@ Build mode: learn
 
 - [ ] Learning activity complete — guided route, focused alternative, prior practice connected, or brief recap
 - [ ] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
-- [ ] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
+- [x] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
 
-Activity and evidence: [what actually happened; real document/test/code references; unfinished work if interrupted]
-Route and stops: [actual paths and symbols; guided stops completed, or reference-only route]
-Edit outcome: [tried/kept/reverted/declined/not applicable; verification if changed]
-Reflection: [offered/answered/declined/already covered — personal answer belongs only in the ignored profile]
-Activity mode: [live app and editor, explicit static fallback, focused alternative, prior practice, or recap]
+Activity and evidence: App map generated from commit `1912713`, checked against the source (HTML structure valid, every cited path and symbol confirmed: dashboard.js `renderDemo`/`demoEl.addEventListener`/`moveRider`/`easeRiders`/`connectLive`, routes.js `/api/dev/simulation`, demo.js `tick`, route-plan.js `STEPS`, arrival.js `ARRIVAL_METERS`, dashboard.html `#demo-riders`, server.js `req.secure`). Same session also produced the two build fixes the practice is grounded in: the secure-cookie login loop and the dev-mode demo. Map shown at `devpost/app-map.html`; guided route offered, learner response pending.
+Route and stops: Reference route from the finished code (not yet an interactive tour): `public/js/dashboard.js` demo click handler → `src/routes.js` owner-guarded `/api/dev/simulation` → `src/demo.js` `tick()` → `src/ws.js` broadcast → `public/js/dashboard.js` `moveRider()`.
+Edit outcome: Optional safe edit offered — raise `STEPS` in `src/route-plan.js` to slow the demo dots; outcome pending.
+Reflection: Offered — one optional question about what they would do differently next time; answer pending.
+Activity mode: static app map checked in the terminal, live app running for hands-on use.
 
 ## Revisions
 - Added compact names beside moving rider dots and recipient destination pins at the learner's request; labels use existing names and do not add a geocoding service.
