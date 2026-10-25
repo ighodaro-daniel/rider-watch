@@ -21,7 +21,9 @@ const cloudflaredPath = process.env.CLOUDFLARED_BIN || (() => {
 let tunnelProcess = null;
 let tunnelUrlReady = false;
 let shuttingDown = false;
-const sessionSecret = process.env.SESSION_SECRET || (shareMode ? crypto.randomBytes(32).toString('hex') : 'rider-watch-local-session');
+// A fresh random secret per start: sessions live in memory anyway, so a restart
+// logging everyone out changes nothing, and no default secret is published.
+const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const sessionStore = new session.MemoryStore();
 
 if (shareMode) app.set('trust proxy', 1);
