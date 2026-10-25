@@ -5,5 +5,11 @@
 node_modules/
 config.json
 data/db.json
+
+# Agent skill-pack tooling, kept local and out of the published repository
+.agents/
+.claude/
+agent/
+skills-lock.json
 *.Zone.Identifier
 *:Zone.Identifier

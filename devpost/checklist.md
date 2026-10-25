@@ -46,7 +46,7 @@ Build mode: learn
 
 ## Final Review
 
-- [ ] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page.
+- [x] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page. Fixed in `server.js`; learner signed in and used the dashboard afterwards.
 - [x] Dev-mode **▶ Demo** control starts and stops the simulated riders from the server, and the dots travel at the slower pace — learner tried it and confirmed it works.
 - [x] Final review complete — feedback resolved and learner confirms ready to ship (learner moved straight on to `6-ship`)
 
