@@ -42,12 +42,12 @@ Build mode: learn
 ## Hands-on Checkpoints
 
 - [x] Early usable behavior explored — after slice 1: tried real-phone tracking; rider and recipient map labels looked good to the learner.
-- [ ] Final kick-the-tires exploration and feedback completed — after all slices, freely try the core journey and awkward inputs.
+- [x] Final kick-the-tires exploration and feedback completed — after all slices: signed in, tried the live map and labels, reported the local sign-in loop and asked for a dev-mode demo with slower dots; both fixed, retried, and confirmed ("the demo is actively working").
 
 ## Final Review
 
 - [ ] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page.
-- [ ] Dev-mode **▶ Demo** control starts and stops the simulated riders from the server, and the dots travel at the slower pace — learner to try it.
+- [x] Dev-mode **▶ Demo** control starts and stops the simulated riders from the server, and the dots travel at the slower pace — learner tried it and confirmed it works.
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map
