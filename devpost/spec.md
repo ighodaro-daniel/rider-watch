@@ -13,7 +13,7 @@ Rider Watch is one small web app that runs on your computer. You start it with o
 - **The map** is Leaflet, a free map library, with a dark map style so it looks like World Monitor.
 - **Live updates** use WebSockets, a connection that stays open so the dashboard updates the instant a rider moves, with no refresh.
 - **Saved data** (recipients, which riders are monitored, which parcels are received) lives in one file, `data/db.json`. Think of it as a small spreadsheet the app reads and writes.
-- Rider movement can be simulated with `scripts/simulate-rider.js` or shared from a real phone. Phone GPS requires HTTPS, so optional phone-test mode opens a temporary tunnel to the local Node server. The rider explicitly starts and stops sharing on the phone page. The dashboard keeps its visible "Simulated riders" label for simulator sessions.
+- Rider movement can be simulated from the dashboard's **▶ Demo** control (dev mode, played by the server) or with `scripts/simulate-rider.js`, or shared from a real phone. Phone GPS requires HTTPS, so optional phone-test mode opens a temporary tunnel to the local Node server. The rider explicitly starts and stops sharing on the phone page. The dashboard keeps its visible "Simulated riders" label for simulator sessions.
 
 Why this shape: it needs no accounts with outside services, no database to install, and no deployment, so it fits a few hours and is easy to record.
 
@@ -23,7 +23,7 @@ PRD ref: `prd.md > The Core Journey`.
 1. **Login** — you enter your username and password on `login.html`. The server checks them against the single owner account in `config.json`, then gives your browser a session cookie (a small token that says "this is the owner"). → you land on `dashboard.html`.
 2. **Add recipient** — you type a name and either choose a built-in sample address or place a destination pin on the map. The server saves the selected map location in `db.json`. → the name appears in the side panel and a marker appears on the map.
 3. **Monitor riders** — you tick Rider 1 and/or Rider 2. The server marks them monitored and produces a **tracking link** for each (`/track/<token>`). The dashboard shows a copyable link. In phone-test mode it uses the HTTPS tunnel address; the owner shares it manually.
-4. **Rider shares location** — for simulation, `simulate-rider.js` sends positions to `POST /api/location/<token>`. For a real phone, the rider opens `rider.html` through the HTTPS link and taps **Start sharing**; the browser asks for location permission. The rider can stop sharing on that page.
+4. **Rider shares location** — for simulation, the dashboard's **▶ Demo** control starts the server-side simulator (or `simulate-rider.js` posts to `POST /api/location/<token>`). For a real phone, the rider opens `rider.html` through the HTTPS link and taps **Start sharing**; the browser asks for location permission. The rider can stop sharing on that page.
 5. **Watch** — the server forwards each position over the WebSocket to your dashboard. → the rider's dot moves on the map.
 6. **Arrival** — each time a position arrives, the server measures its distance to every recipient who has not yet arrived. If any is within **50 metres**, that recipient is marked **arrived**, the server broadcasts it, and the dashboard plays an **alert sound** and highlights the recipient.
 7. **Call** — you call the recipient on WhatsApp, outside the app.
@@ -108,8 +108,8 @@ Files: `server.js`, `package.json`.
 PRD ref: `prd.md > Rider monitoring`.
 
 ### Rider simulator
-Plays two riders, each walking the parcels dealt to it and then back again, posting positions every second and re-reading the plan every three seconds so a parcel added or shuffled mid-demo is picked up without a restart. Clearly labeled simulated in the app.
-Files: `scripts/simulate-rider.js`.
+Plays two riders, each walking the parcels dealt to it and then back again, sending a position every second and re-reading the plan every three seconds so a parcel added or shuffled mid-demo is picked up without a restart. Movement is paced over 80 updates per leg (about 80 seconds at one update a second), so each dot glides steadily between stops rather than darting across the map. Two ways to run it: the dashboard's **▶ Demo** control in dev mode, where the server plays the riders with no second terminal, or `npm run simulate` as a separate process posting to the location endpoint. Both share the route geometry in `src/route-plan.js`. Clearly labeled simulated in the app.
+Files: `src/demo.js`, `src/route-plan.js`, `scripts/simulate-rider.js`.
 PRD ref: `prd.md > Live map and arrival alert`.
 
 ### Live map and rider positions
@@ -141,9 +141,10 @@ rider-watch/
 │   ├── routes.js             # API: recipients, riders, location
 │   ├── store.js              # read/write data/db.json
 │   ├── geo.js                # address lookup + distance
-│   ├── arrival.js            # arrival detection
-│   ├── assign.js              # which rider carries which parcel
-│   └── ws.js                 # live updates to dashboard
+│   ├── arrival.js            # arrival detection│   ├── assign.js              # which rider carries which parcel
+│   ├── demo.js                # dev-mode simulation run by the server
+│   ├── route-plan.js          # shared simulated-rider routes and pace
+│   └── ws.js                  # live updates to dashboard
 ├── public/
 │   ├── login.html
 │   ├── dashboard.html
@@ -170,8 +171,9 @@ rider-watch/
   - `DELETE /api/recipients/:id` → removes a received delivery (`409` if it has not been ticked received)
   - `POST /api/assign` → re-deals every unfinished parcel between the riders, returns all recipients
   - `POST /api/riders/:id/monitor` `{monitored}` → rider with tracking link
+  - `POST /api/dev/simulation` `{on}` → starts or stops the dev-mode simulated riders (owner only)
   - `POST /api/location/:token` `{lat, lng, source}` → position accepted (no login; the token identifies the rider; source is `phone` or `simulation`)
-  - Authenticated owner WebSocket messages to dashboard: `position`, `rider`, `arrival`, `recipient-removed`, `assignments`. Connections without a valid owner session are rejected.
+  - Authenticated owner WebSocket messages to dashboard: `position`, `rider`, `arrival`, `recipient-removed`, `assignments`, `simulation`. Connections without a valid owner session are rejected.
 
 ## Important Failure Modes
 - **Map tiles don't load (no internet)** → the dashboard still works with a plain dark background, and a small notice says the map imagery couldn't load.

@@ -88,6 +88,7 @@ Success: the demo shows steps 5 through 8 working.
 - Side panel shows names only, expanding on click — keeps the list compact.
 - Look: World Monitor style, with added aesthetic polish.
 
+- A **▶ Demo** control on the dashboard (dev mode) starts and stops the simulated riders from the server, so a demo needs no second terminal; `npm run simulate` stays available. Simulated movement is deliberately slow — about 80 seconds per leg — so the dot glides between stops instead of jumping.
 - Each recipient is carried by one rider: the assignment is random when the recipient is added, and Shuffle re-deals the unfinished ones. Only the assigned rider completes a delivery, so a rider passing another rider's destination leaves it alone.
 - The deal is random among the riders with the fewest parcels still out, not a plain coin toss — a coin toss can leave one rider with everything and the other idle.
 - The demo uses a single owner; multiple owners with separate dashboards is deferred.

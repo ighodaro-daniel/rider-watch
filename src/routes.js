@@ -5,11 +5,16 @@ const { requireOwner } = require('./auth');
 const { broadcast } = require('./ws');
 const { checkArrivals } = require('./arrival');
 const assign = require('./assign');
+const demo = require('./demo');
 
 const router = express.Router();
 
 router.get('/api/state', requireOwner, (req, res) => {
-  res.json({ ...store.getState(), publicBaseUrl: req.app.locals.publicBaseUrl || null });
+  res.json({
+    ...store.getState(),
+    publicBaseUrl: req.app.locals.publicBaseUrl || null,
+    simulation: demo.status()
+  });
 });
 
 router.get('/api/sample-addresses', requireOwner, (req, res) => {
@@ -102,6 +107,13 @@ router.post('/api/assign', requireOwner, (req, res) => {
 
   broadcast({ type: 'assignments', recipients });
   return res.json({ recipients });
+});
+
+// Dev/demo mode: play the riders from inside the server, so a demo needs no
+// second terminal. Owner-only, and it can be stopped at any time.
+router.post('/api/dev/simulation', requireOwner, (req, res) => {
+  const on = req.body.on === true || req.body.on === 'true';
+  return res.json(on ? demo.start() : demo.stop());
 });
 
 router.post('/api/riders/:id/monitor', requireOwner, (req, res) => {

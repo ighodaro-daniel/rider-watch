@@ -29,6 +29,7 @@ const datalistEl = document.getElementById('sample-addresses');
 const riderListEl = document.getElementById('rider-list');
 const toggleAddEl = document.getElementById('toggle-add');
 const shuffleEl = document.getElementById('shuffle-riders');
+const demoEl = document.getElementById('demo-riders');
 const centerOnLocationEl = document.getElementById('center-on-location');
 const choosePinEl = document.getElementById('choose-pin');
 const pinStatusEl = document.getElementById('pin-status');
@@ -40,6 +41,7 @@ let selectedPin = null;
 let pinMarker = null;
 let choosingPin = false;
 let publicBaseUrl = location.origin;
+let simulationRunning = false;
 
 // Rider 1 in teal, rider 2 in violet, so a dot on the map matches the tag on
 // the delivery it is carrying.
@@ -488,8 +490,8 @@ function riderLayer(riderId) {
   return marker;
 }
 
-// Positions arrive about once a second; easing the dot between them keeps the
-// movement smooth instead of jumping.
+// Positions arrive about once a second. Easing the dot across that whole second
+// keeps the movement a calm glide rather than a series of jumps.
 const riderTargets = new Map();
 
 function easeRiders() {
@@ -498,8 +500,8 @@ function easeRiders() {
     if (!marker || !marker._map) continue;
 
     const current = marker.getLatLng();
-    const lat = current.lat + (target.lat - current.lat) * 0.18;
-    const lng = current.lng + (target.lng - current.lng) * 0.18;
+    const lat = current.lat + (target.lat - current.lat) * 0.07;
+    const lng = current.lng + (target.lng - current.lng) * 0.07;
 
     if (Math.abs(target.lat - lat) < 1e-6 && Math.abs(target.lng - lng) < 1e-6) {
       marker.setLatLng(target);
@@ -587,6 +589,11 @@ function connectLive() {
     if (message.type === 'assignments') {
       applyAssignments(message.recipients);
     }
+
+    if (message.type === 'simulation') {
+      simulationRunning = Boolean(message.running);
+      renderDemo();
+    }
   });
 
   socket.addEventListener('close', () => {
@@ -641,12 +648,35 @@ shuffleEl.addEventListener('click', async () => {
   setTimeout(() => { shuffleEl.textContent = '⇄ Shuffle'; }, 1200);
 });
 
+/* ---------- demo riders (dev mode) ---------- */
+
+// The server plays the riders, so a demo needs no second terminal.
+function renderDemo() {
+  demoEl.textContent = simulationRunning ? '■ Stop demo' : '▶ Demo';
+  demoEl.classList.toggle('is-live', simulationRunning);
+  demoEl.title = simulationRunning
+    ? 'Stop the simulated riders'
+    : 'Dev mode: play the simulated riders from the server, no second terminal needed';
+}
+
+demoEl.addEventListener('click', async () => {
+  const { ok, body } = await api('/api/dev/simulation', {
+    method: 'POST',
+    body: JSON.stringify({ on: !simulationRunning })
+  });
+  if (!ok) return;
+  simulationRunning = Boolean(body.running);
+  renderDemo();
+});
+
 /* ---------- startup ---------- */
 
 async function refresh() {
   const { ok, body } = await api('/api/state');
   if (!ok) return;
   publicBaseUrl = body.publicBaseUrl || location.origin;
+  simulationRunning = Boolean(body.simulation && body.simulation.running);
+  renderDemo();
   // Riders first: the names carry the rider tag, so it needs to know who is who.
   renderRiders(body.riders);
   renderList(body.recipients);

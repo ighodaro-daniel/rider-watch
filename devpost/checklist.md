@@ -47,6 +47,7 @@ Build mode: learn
 ## Final Review
 
 - [ ] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page.
+- [ ] Dev-mode **▶ Demo** control starts and stops the simulated riders from the server, and the dots travel at the slower pace — learner to try it.
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map
@@ -63,3 +64,4 @@ Activity mode: [live app and editor, explicit static fallback, focused alternati
 
 ## Revisions
 - Added compact names beside moving rider dots and recipient destination pins at the learner's request; labels use existing names and do not add a geocoding service.
+- Added a **▶ Demo** control that starts and stops the simulated riders from the server (dev mode, so a demo needs no second terminal) and slowed simulated movement from 40 to 80 updates per leg with gentler dot easing, at the learner's request. `npm run simulate` still works and now shares `src/route-plan.js`, so both paths walk the same route at the same pace.
