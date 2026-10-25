@@ -46,6 +46,7 @@ Build mode: learn
 
 ## Final Review
 
+- [ ] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page.
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map

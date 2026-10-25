@@ -33,8 +33,17 @@ app.use(session({
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: shareMode }
+  cookie: { httpOnly: true, sameSite: 'lax', secure: false }
 }));
+
+// Share mode is reached two ways: the temporary HTTPS tunnel, and plain
+// http://localhost for the owner. Mark the login cookie Secure only when the
+// request really is HTTPS; otherwise a local sign-in is quietly dropped and the
+// dashboard bounces straight back to the login page.
+app.use((req, res, next) => {
+  if (req.secure) req.session.cookie.secure = true;
+  next();
+});
 
 app.get('/', (req, res) => {
   if (req.session.owner) return res.redirect('/dashboard.html');
