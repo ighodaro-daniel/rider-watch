@@ -9,7 +9,7 @@ Build mode: learn
 
 ## Slices
 
-- [ ] **1. See a real rider move on the map**
+- [x] **1. See a real rider move on the map**
   Becomes usable: The owner can sign in, place a nearby destination pin, share a temporary HTTPS tracking link, and see a rider's phone position update on the live map after the rider explicitly starts sharing; rider and recipient names identify the map markers.
   Why now: This makes the requested real-phone test the first usable behavior and surfaces the phone-permission and HTTPS-tunnel risks early; project setup is part of this working path, not a separate step.
   PRD ref: `prd.md > The Core Journey` (steps 1–5); `prd.md > Rider tracking page`; `prd.md > What We're Building`
@@ -19,7 +19,7 @@ Build mode: learn
   Learner check: On the owner device, open the phone-test URL and share the rider link with the test phone. Start sharing, move a short distance, and check that the rider's name stays beside the moving dot and the recipient's name is beside the destination pin; stop sharing and check that updates stop.
   Commit: `Add consented phone tracking`
 
-- [ ] **2. Detect arrival and confirm a delivery**
+- [x] **2. Detect arrival and confirm a delivery**
   Becomes usable: When the assigned rider reaches a recipient, the app marks arrival and alerts the owner; the owner can then mark the parcel received, with that state preserved after restart.
   Why now: With real phone positions already reaching the map, this completes the unique kernel and owner journey; simulation stays available for repeatable checks of arrival edge cases.
   PRD ref: `prd.md > The Core Journey` (steps 5–8); `prd.md > Live map and arrival alert`; `prd.md > States and Boundaries`
@@ -27,9 +27,9 @@ Build mode: learn
   Build: Detect arrival only when the assigned rider is within the specified distance, broadcast and display the arrival with an audible alert, and let the owner mark the parcel received. Preserve state in the JSON store and retain simulated movement for reproducible testing.
   Verify (mechanical): Run the app and simulator, then confirm an assigned rider reaching its destination triggers one arrival and alert, while another rider passing that destination does not. Mark the parcel received, restart the server, and confirm its received state remains saved; also test the arrival with a real phone.
   Learner check: Use the phone to approach a pinned destination and watch for the arrival alert; mark the parcel received on the dashboard. If GPS accuracy makes the approach hard to repeat, use the simulator to confirm the same arrival behavior.
-  Commit: `Add arrival alerts and received state`
+  Commit: `16c9f96` (arrival alerts) and `92f76e8` (received state)
 
-- [ ] **3. Finish the owner delivery controls**
+- [x] **3. Finish the owner delivery controls**
   Becomes usable: The owner can inspect recipient details, rebalance unfinished deliveries between riders, and remove a delivery only after it is marked received.
   Why now: These controls refine the already-working dispatch loop without delaying evidence for the live-tracking kernel or the phone-test risk.
   PRD ref: `prd.md > Recipients to reach (side panel)`; `prd.md > Product Decisions`; `prd.md > States and Boundaries`
@@ -41,7 +41,7 @@ Build mode: learn
 
 ## Hands-on Checkpoints
 
-- [ ] Early usable behavior explored — after slice 1: try the real-phone tracking flow and give feedback while it can still shape the arrival and owner-control slices.
+- [x] Early usable behavior explored — after slice 1: tried real-phone tracking; rider and recipient map labels looked good to the learner.
 - [ ] Final kick-the-tires exploration and feedback completed — after all slices, freely try the core journey and awkward inputs.
 
 ## Final Review
