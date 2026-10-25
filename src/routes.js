@@ -9,7 +9,7 @@ const assign = require('./assign');
 const router = express.Router();
 
 router.get('/api/state', requireOwner, (req, res) => {
-  res.json(store.getState());
+  res.json({ ...store.getState(), publicBaseUrl: req.app.locals.publicBaseUrl || null });
 });
 
 router.get('/api/sample-addresses', requireOwner, (req, res) => {
@@ -20,16 +20,40 @@ router.post('/api/recipients', requireOwner, (req, res) => {
   const name = String(req.body.name || '').trim();
   const address = String(req.body.address || '').trim();
 
-  if (!name || !address) {
-    return res.status(400).json({ error: 'Enter both a name and an address.' });
+  if (!name) {
+    return res.status(400).json({ error: 'Enter a recipient name.' });
   }
 
-  const place = lookupAddress(address);
-  if (!place) {
-    return res.status(400).json({
-      error: `We couldn't find "${address}" in the sample addresses. Pick one of these:`,
-      samples: sampleAddresses()
-    });
+  const hasLat = req.body.lat !== undefined && req.body.lat !== null && req.body.lat !== '';
+  const hasLng = req.body.lng !== undefined && req.body.lng !== null && req.body.lng !== '';
+  let place;
+
+  if (hasLat || hasLng) {
+    if (!hasLat || !hasLng) {
+      return res.status(400).json({ error: 'Choose a destination pin on the map.' });
+    }
+
+    const lat = typeof req.body.lat === 'number' || (typeof req.body.lat === 'string' && req.body.lat.trim())
+      ? Number(req.body.lat)
+      : NaN;
+    const lng = typeof req.body.lng === 'number' || (typeof req.body.lng === 'string' && req.body.lng.trim())
+      ? Number(req.body.lng)
+      : NaN;
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: 'That destination pin has invalid coordinates.' });
+    }
+    place = { address: address || 'Pinned destination', lat, lng };
+  } else {
+    if (!address) {
+      return res.status(400).json({ error: 'Enter a sample address or choose a destination pin on the map.' });
+    }
+    place = lookupAddress(address);
+    if (!place) {
+      return res.status(400).json({
+        error: `We couldn't find "${address}" in the sample addresses. Choose a sample address or pin the destination on the map:`,
+        samples: sampleAddresses()
+      });
+    }
   }
 
   // Every new parcel is dealt to a rider as it arrives, so the owner never has
@@ -101,8 +125,9 @@ router.post('/api/location/:token', (req, res) => {
     return res.status(400).json({ error: 'A position needs numeric lat and lng.' });
   }
 
-  const position = store.setPosition(rider.id, lat, lng);
-  broadcast({ type: 'position', riderId: rider.id, name: rider.name, lat, lng, at: position.at });
+  const source = req.body.source === 'simulation' ? 'simulation' : 'phone';
+  const position = store.setPosition(rider.id, lat, lng, source);
+  broadcast({ type: 'position', riderId: rider.id, name: rider.name, lat, lng, source, at: position.at });
 
   // Within 50 m of a recipient means that delivery has arrived; alert once each.
   // Only monitored riders count, per `prd.md > Live map and arrival alert` — a

@@ -29,9 +29,17 @@ const datalistEl = document.getElementById('sample-addresses');
 const riderListEl = document.getElementById('rider-list');
 const toggleAddEl = document.getElementById('toggle-add');
 const shuffleEl = document.getElementById('shuffle-riders');
+const centerOnLocationEl = document.getElementById('center-on-location');
+const choosePinEl = document.getElementById('choose-pin');
+const pinStatusEl = document.getElementById('pin-status');
+const trackingModeEl = document.getElementById('tracking-mode');
 
 const riderMarkers = new Map();
 const riderTrails = new Map();
+let selectedPin = null;
+let pinMarker = null;
+let choosingPin = false;
+let publicBaseUrl = location.origin;
 
 // Rider 1 in teal, rider 2 in violet, so a dot on the map matches the tag on
 // the delivery it is carrying.
@@ -53,6 +61,80 @@ function riderTag(riderId) {
 
 let currentRecipients = [];
 let currentRiders = [];
+
+function updateTrackingMode() {
+  const sources = new Set(currentRiders
+    .filter((rider) => rider.monitored && rider.position && Date.now() - rider.position.at <= SILENT_AFTER_MS)
+    .map((rider) => rider.position.source || 'phone'));
+
+  if (sources.size > 1) trackingModeEl.textContent = 'MIXED RIDER SOURCES';
+  else if (sources.has('simulation')) trackingModeEl.textContent = 'SIMULATED RIDERS';
+  else if (sources.has('phone')) trackingModeEl.textContent = 'PHONE GPS';
+  else trackingModeEl.textContent = 'RIDER TRACKING';
+}
+
+function clearPin() {
+  selectedPin = null;
+  choosingPin = false;
+  choosePinEl.textContent = 'Choose destination on map';
+  if (pinMarker) {
+    map.removeLayer(pinMarker);
+    pinMarker = null;
+  }
+  pinStatusEl.textContent = '';
+}
+
+function placePin(latlng) {
+  selectedPin = { lat: latlng.lat, lng: latlng.lng };
+  choosingPin = false;
+  choosePinEl.textContent = 'Choose destination on map';
+  if (pinMarker) map.removeLayer(pinMarker);
+  pinMarker = L.circleMarker(latlng, {
+    radius: 9,
+    color: '#5ee8c3',
+    weight: 2,
+    fillColor: '#5ee8c3',
+    fillOpacity: 0.65
+  }).addTo(map);
+  pinStatusEl.textContent = `Destination pinned at ${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}.`;
+}
+
+map.on('click', (event) => {
+  if (choosingPin) placePin(event.latlng);
+});
+
+centerOnLocationEl.addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    pinStatusEl.textContent = 'This browser cannot find your location. Move the map manually instead.';
+    return;
+  }
+  if (!window.isSecureContext) {
+    pinStatusEl.textContent = 'Location needs a secure connection. Use localhost or the HTTPS phone-test link.';
+    return;
+  }
+
+  pinStatusEl.textContent = 'Waiting for location permission…';
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      map.setView([coords.latitude, coords.longitude], Math.max(map.getZoom(), 15));
+      pinStatusEl.textContent = 'Map centered on your location. Choose the delivery destination on the map.';
+    },
+    (error) => {
+      pinStatusEl.textContent = error.code === error.PERMISSION_DENIED
+        ? 'Location permission was denied. Move the map manually instead.'
+        : 'Your location is unavailable. Move the map manually instead.';
+    },
+    { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
+  );
+});
+
+choosePinEl.addEventListener('click', () => {
+  choosingPin = !choosingPin;
+  choosePinEl.textContent = choosingPin ? 'Click the map to place the pin…' : 'Choose destination on map';
+  pinStatusEl.textContent = choosingPin ? 'Click the delivery destination on the map.' : '';
+});
+
+
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -77,7 +159,14 @@ function markerFor(recipient) {
     }).addTo(map);
     markers.set(recipient.id, marker);
   }
-  marker.bindTooltip(`${recipient.name}${riderTag(recipient.riderId) ? ` · ${riderTag(recipient.riderId)}` : ''}`, { direction: 'top', offset: [0, -8] });
+  const label = document.createElement('span');
+  label.textContent = `${recipient.name}${riderTag(recipient.riderId) ? ` · ${riderTag(recipient.riderId)}` : ''}`;
+  marker.bindTooltip(label, {
+    permanent: true,
+    direction: 'top',
+    offset: [0, -8],
+    className: 'map-name-label recipient-map-label'
+  });
   marker.setStyle({ color: recipient.received ? '#5ee8c3' : '#efb84b', fillColor: recipient.received ? '#5ee8c3' : '#efb84b' });
   return marker;
 }
@@ -317,7 +406,7 @@ function riderRow(rider) {
 
     const link = document.createElement('span');
     link.className = 'rider-url';
-    link.textContent = `${location.origin}/track/${rider.token}`;
+    link.textContent = `${publicBaseUrl}/track/${rider.token}`;
     link.title = link.textContent;
 
     const copy = document.createElement('button');
@@ -344,6 +433,7 @@ function riderRow(rider) {
 function renderRiders(riders) {
   currentRiders = riders;
   riderListEl.replaceChildren(...riders.map(riderRow));
+  updateTrackingMode();
 }
 
 function applyRider(updated) {
@@ -366,7 +456,7 @@ function applyRider(updated) {
     return;
   }
 
-  if (merged.position) moveRider(merged.id, merged.position.lat, merged.position.lng);
+  if (merged.position) moveRider(merged.id, merged.position.lat, merged.position.lng, merged.position.source);
 }
 
 function riderLayer(riderId) {
@@ -380,6 +470,15 @@ function riderLayer(riderId) {
       iconAnchor: [8, 8]
     });
     marker = L.marker([0, 0], { icon, zIndexOffset: 1000 });
+    const rider = currentRiders.find((item) => item.id === riderId);
+    const label = document.createElement('span');
+    label.textContent = rider ? rider.name : riderId;
+    marker.bindTooltip(label, {
+      permanent: true,
+      direction: 'right',
+      offset: [10, 0],
+      className: 'map-name-label rider-map-label'
+    });
     riderMarkers.set(riderId, marker);
 
     const trail = L.polyline([], { color, weight: 2, opacity: 0.45 });
@@ -413,7 +512,7 @@ function easeRiders() {
 }
 requestAnimationFrame(easeRiders);
 
-function moveRider(riderId, lat, lng) {
+function moveRider(riderId, lat, lng, source = 'phone') {
   const marker = riderLayer(riderId);
   const latlng = L.latLng(lat, lng);
 
@@ -431,12 +530,13 @@ function moveRider(riderId, lat, lng) {
 
   const rider = currentRiders.find((item) => item.id === riderId);
   if (rider) {
-    rider.position = { lat, lng, at: Date.now() };
+    rider.position = { lat, lng, source, at: Date.now() };
     const status = document.querySelector(`[data-status="${riderId}"]`);
     if (status) {
       status.textContent = 'LIVE';
       status.classList.add('is-live');
     }
+    updateTrackingMode();
   }
 }
 
@@ -449,6 +549,7 @@ setInterval(() => {
     status.textContent = state.text;
     status.classList.toggle('is-live', state.live);
   }
+  updateTrackingMode();
 }, 2000);
 
 /* ---------- live updates ---------- */
@@ -468,7 +569,7 @@ function connectLive() {
     if (message.type === 'position') {
       const rider = currentRiders.find((item) => item.id === message.riderId);
       if (!rider || !rider.monitored) return;
-      moveRider(message.riderId, message.lat, message.lng);
+      moveRider(message.riderId, message.lat, message.lng, message.source);
     }
 
     if (message.type === 'rider') {
@@ -545,12 +646,13 @@ shuffleEl.addEventListener('click', async () => {
 async function refresh() {
   const { ok, body } = await api('/api/state');
   if (!ok) return;
+  publicBaseUrl = body.publicBaseUrl || location.origin;
   // Riders first: the names carry the rider tag, so it needs to know who is who.
   renderRiders(body.riders);
   renderList(body.recipients);
   body.recipients.forEach(markerFor);
   body.riders.forEach((rider) => {
-    if (rider.monitored && rider.position) moveRider(rider.id, rider.position.lat, rider.position.lng);
+    if (rider.monitored && rider.position) moveRider(rider.id, rider.position.lat, rider.position.lng, rider.position.source);
   });
   // Keep the form folded away when there is already a route to work through.
   setFormOpen(body.recipients.length === 0);
@@ -571,9 +673,14 @@ async function loadSampleAddresses() {
 formEl.addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = new FormData(formEl);
+  const payload = { name: data.get('name'), address: data.get('address') };
+  if (selectedPin) {
+    payload.lat = selectedPin.lat;
+    payload.lng = selectedPin.lng;
+  }
   const { ok, body } = await api('/api/recipients', {
     method: 'POST',
-    body: JSON.stringify({ name: data.get('name'), address: data.get('address') })
+    body: JSON.stringify(payload)
   });
 
   if (!ok) {
@@ -583,6 +690,7 @@ formEl.addEventListener('submit', async (event) => {
 
   errorEl.hidden = true;
   formEl.reset();
+  clearPin();
   currentRecipients = [...currentRecipients, body];
   renderList(currentRecipients);
   setFormOpen(false);

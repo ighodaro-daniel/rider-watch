@@ -15,7 +15,7 @@
       <div class="brand"><span class="brand-mark">✦</span><span>RIDER WATCH</span></div>
       <div class="live-status"><span class="status-dot"></span> SYSTEM LIVE <span class="mono" id="clock">LOCAL / --:--:--</span></div>
     </header>
-    <div class="map-label">LIVE OPERATIONS <span>·</span> SIMULATED RIDERS</div>
+    <div class="map-label">LIVE OPERATIONS <span>·</span> <span id="tracking-mode">RIDER TRACKING</span></div>
     <aside class="side-panel">
       <div class="panel-heading">
         <div><div class="eyebrow">TODAY'S ROUTE</div><h2>Recipients to reach</h2></div>
@@ -27,8 +27,13 @@
 
       <form id="add-recipient" class="add-form" autocomplete="off">
         <input name="name" placeholder="Recipient name" aria-label="Recipient name" required>
-        <input name="address" placeholder="Address (sample addresses)" aria-label="Address" list="sample-addresses" required>
+        <input name="address" placeholder="Sample address (optional with a map pin)" aria-label="Sample address" list="sample-addresses">
         <datalist id="sample-addresses"></datalist>
+        <div class="pin-actions">
+          <button type="button" id="center-on-location" class="secondary-button">Center map on my location</button>
+          <button type="button" id="choose-pin" class="secondary-button">Choose destination on map</button>
+        </div>
+        <p id="pin-status" class="pin-status" aria-live="polite"></p>
         <button type="submit">+ Add recipient</button>
         <p id="form-error" class="form-error" hidden></p>
       </form>

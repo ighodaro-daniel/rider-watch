@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "simulate": "node scripts/simulate-rider.js"
+    "simulate": "node scripts/simulate-rider.js",
+    "share": "node server.js --share"
   },
   "keywords": [],
   "author": "",

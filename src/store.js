@@ -138,8 +138,8 @@ function findRiderByToken(token) {
   return current.riders.find((item) => item.token === token) || null;
 }
 
-function setPosition(riderId, lat, lng) {
-  const position = { lat, lng, at: Date.now() };
+function setPosition(riderId, lat, lng, source = 'phone') {
+  const position = { lat, lng, source, at: Date.now() };
   positions.set(riderId, position);
   return position;
 }

@@ -2,12 +2,13 @@
 
 A live dispatch dashboard for a small rider team. The owner logs in, adds the recipients to reach, watches riders move on a dark map, and is alerted the moment a rider reaches a destination — then ticks the parcel off as received.
 
-This is a proof of concept built for the Devpost Build With AI: Basics hackathon. Rider movement is **simulated**; everything else (login, recipients, live map, arrival detection, alert, received tick) is real.
+This is a proof of concept built for the Devpost Build With AI: Basics hackathon. Rider movement can be **simulated** or shared from a real phone over a temporary HTTPS tunnel; login, recipients, live map, arrival detection, alert, and received tick are real.
 
 ## What you need
 
 - Node.js 18 or newer (built and tested on v24)
 - An internet connection for the map tiles
+- For real-phone testing, `cloudflared` installed from [Cloudflare's official downloads](https://developers.cloudflare.com/tunnel/downloads/)
 
 ## Run it
 
@@ -28,6 +29,18 @@ npm start
 ```
 
 Open http://localhost:3000 and sign in with the username and password from `config.json`.
+
+## Test from a real phone
+
+Install Cloudflare's `cloudflared` program first, then run:
+
+```bash
+npm run share
+```
+
+When the command prints `Phone-test HTTPS link base`, open that HTTPS URL on the owner device and sign in. On the dashboard, choose **Center map on my location** (the one-time position is used only in your browser to move the map), then choose **Choose destination on map** and tap the intended delivery spot. Monitor a rider and copy the rider's HTTPS tracking link to your phone. The rider page asks the rider to tap **Start sharing** and grant location permission; **Stop sharing** ends updates. Keep the terminal running during the test; press Ctrl+C to close the temporary tunnel.
+
+Cloudflare Quick Tunnels need no account and are for testing, not production. While running, the temporary URL makes the local app reachable through Cloudflare; anyone with the URL can reach the app, though the dashboard and its live WebSocket still require owner login. Live location requests pass through Cloudflare. Treat rider links as private, share them only with the intended rider, and stop the command when finished.
 
 ## Try the demo
 
@@ -64,10 +77,6 @@ npm run simulate
 
 Saved data lives in `data/db.json` (git-ignored, created on first run). Sample addresses live in `data/sample-addresses.json` and are placeholders for Lagos.
 
-## Using a real phone as a rider
-
-The tracking link works from a real phone, but browsers only allow location sharing over **HTTPS** — an `http://` address other than `localhost` is blocked by the browser, and the rider page says so instead of failing silently. For a real ride you would expose the app through an HTTPS tunnel (for example ngrok) and open that link. The demo recording uses the simulator, so nothing is needed for submission.
-
 ## Deliberately not built
 
-Multiple owners, more than two riders, off-route detection, delivery history, in-app calls, and rider logins are all outside this proof of concept. The plan and reasoning live in `devpost/`.
+Multiple owners, more than two riders, off-route detection, delivery history, in-app calls, rider logins, production hosting, and NIPOST address suggestions (pending official API access) are outside this proof of concept. The plan and reasoning live in `devpost/`.

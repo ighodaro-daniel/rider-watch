@@ -9,14 +9,18 @@
 <body class="rider-page">
   <main class="rider-card">
     <div class="eyebrow">RIDER WATCH</div>
-    <h1 class="rider-title">Your location is<br><span>being shared.</span></h1>
-    <p class="lede">Your dispatcher can see where you are until you close this page.</p>
+    <h1 class="rider-title">Your location,<br><span>your choice.</span></h1>
+    <p class="lede">Your dispatcher can see your live location while sharing is on. Start only when you’re ready.</p>
+    <div class="rider-actions">
+      <button type="button" id="start-sharing">Start sharing</button>
+      <button type="button" id="stop-sharing" class="secondary-button" disabled>Stop sharing</button>
+    </div>
     <div class="rider-state">
       <span class="status-dot" id="rider-dot"></span>
-      <span id="rider-status">Starting location sharing…</span>
+      <span id="rider-status">Location is not being shared.</span>
     </div>
     <p class="rider-detail mono" id="rider-detail"></p>
-    <p class="rider-note">This page sends your position only to your dispatcher's dashboard. Close it to stop sharing.</p>
+    <p class="rider-note">Your phone asks permission before sharing. You can stop at any time; closing this page also stops sharing.</p>
   </main>
   <script src="/js/rider.js"></script>
 </body>

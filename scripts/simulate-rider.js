@@ -99,7 +99,7 @@ async function post(token, name, position) {
     const response = await fetch(`${base}/api/location/${token}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(position)
+      body: JSON.stringify({ ...position, source: 'simulation' })
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
