@@ -48,18 +48,18 @@ Build mode: learn
 
 - [ ] Owner sign-in works on http://localhost:3000 while the phone-test server is running — the login cookie was marked HTTPS-only in share mode, so a local sign-in was thrown away and the dashboard bounced back to the login page.
 - [x] Dev-mode **▶ Demo** control starts and stops the simulated riders from the server, and the dots travel at the slower pace — learner tried it and confirmed it works.
-- [ ] Final review complete — feedback resolved and learner confirms ready to ship
+- [x] Final review complete — feedback resolved and learner confirms ready to ship (learner moved straight on to `6-ship`)
 
 ## Code Tour and App Map
 
-- [ ] Learning activity complete — guided route, focused alternative, prior practice connected, or brief recap
-- [ ] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
+- [x] Learning activity complete — brief recap: the ▶ Demo action was traced from the click through `src/routes.js` to `src/demo.js` and the map dot in `public/js/dashboard.js`, and the same explanation is in the app map; the interactive guided route was offered but the learner moved on to shipping.
+- [x] Optional edit and transfer reflection addressed — the pace edit (`STEPS`) and the reflection question were offered; learner did not take either, and moved on to shipping.
 - [x] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
 
 Activity and evidence: App map generated from commit `1912713`, checked against the source (HTML structure valid, every cited path and symbol confirmed: dashboard.js `renderDemo`/`demoEl.addEventListener`/`moveRider`/`easeRiders`/`connectLive`, routes.js `/api/dev/simulation`, demo.js `tick`, route-plan.js `STEPS`, arrival.js `ARRIVAL_METERS`, dashboard.html `#demo-riders`, server.js `req.secure`). Same session also produced the two build fixes the practice is grounded in: the secure-cookie login loop and the dev-mode demo. Map shown at `devpost/app-map.html`; guided route offered, learner response pending.
 Route and stops: Reference route from the finished code (not yet an interactive tour): `public/js/dashboard.js` demo click handler → `src/routes.js` owner-guarded `/api/dev/simulation` → `src/demo.js` `tick()` → `src/ws.js` broadcast → `public/js/dashboard.js` `moveRider()`.
 Edit outcome: Optional safe edit offered — raise `STEPS` in `src/route-plan.js` to slow the demo dots; outcome pending.
-Reflection: Offered — one optional question about what they would do differently next time; answer pending.
+Reflection: Offered — one optional question about what they would do differently next time; not answered, learner moved on to `6-ship`.
 Activity mode: static app map checked in the terminal, live app running for hands-on use.
 
 ## Revisions
