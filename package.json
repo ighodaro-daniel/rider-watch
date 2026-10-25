@@ -9,8 +9,8 @@
     "share": "node server.js --share"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "ighodaro-daniel",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
